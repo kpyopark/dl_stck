@@ -158,9 +158,15 @@ public class StockMultiLayerPredictor {
         List<DataSet> mergedTarget = new ArrayList<DataSet>();
         for(String trainFile : dataFilePaths) {
             RecordReader recordReader = new CSVRecordReader(numLinesToSkip,delimiter);
-            recordReader.initialize(new FileSplit(new File(trainFile)));
-            DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader,batchSize);
-            mergedTarget.add(iterator.next());
+            FileDelegator fileDelegator = null;
+            try {
+                fileDelegator = new FileDelegator(trainFile);
+                recordReader.initialize(new FileSplit(fileDelegator.getTempFile()));
+                DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader,batchSize);
+                mergedTarget.add(iterator.next());
+            } finally {
+            	if(fileDelegator != null) try {fileDelegator.close();} catch (Exception e) {}
+            }
         }
         orgData = DataSet.merge(mergedTarget);
     }
