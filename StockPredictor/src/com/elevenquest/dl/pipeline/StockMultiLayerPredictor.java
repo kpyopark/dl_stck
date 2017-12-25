@@ -76,6 +76,7 @@ public class StockMultiLayerPredictor {
     String modelPath;
     String learningSource;
     
+    FileDelegator file = null;
     boolean predictYn = false;
     boolean preferReusedModel = false;
     boolean modelExist = false;
@@ -89,8 +90,13 @@ public class StockMultiLayerPredictor {
     	this.predictYn = predictYn;
     	this.preferReusedModel = preferReusedModel;
     	if(modelPath != null) {
-    		File modelPathFile = new File(modelPath);
-    		modelExist = modelPathFile.exists();
+    		try {
+        		file = new FileDelegator(modelPath);
+    			file.getLength();
+    			modelExist = true;
+    		} catch (Exception e) {
+    			modelExist = false;
+    		}
     	}
     }
     

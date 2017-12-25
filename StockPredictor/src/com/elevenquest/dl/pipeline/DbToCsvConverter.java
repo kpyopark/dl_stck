@@ -14,7 +14,7 @@ import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 
 public class DbToCsvConverter {
 	
-	private static void printHeader(FileDelegator out, ResultSetMetaData rsmd) throws SQLException {
+	private static void printHeader(FileDelegator out, ResultSetMetaData rsmd) throws SQLException, IOException {
 		StringBuffer sb = new StringBuffer();
 		for(int column = 0; column < rsmd.getColumnCount(); column++ ) {
 			sb.append(",").append(rsmd.getColumnName(column + 1));
@@ -22,7 +22,7 @@ public class DbToCsvConverter {
 		out.println(sb.substring(1));
 	}
 	
-	private static void printBody(FileDelegator out, ResultSet rs) throws SQLException {
+	private static void printBody(FileDelegator out, ResultSet rs) throws SQLException, IOException {
 		StringBuffer oneLine = null;
 		ResultSetMetaData rsmd = rs.getMetaData();
 		while(rs.next()) {

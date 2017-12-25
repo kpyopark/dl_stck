@@ -2,7 +2,9 @@ package com.elevenquest.dl.pipeline;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -10,14 +12,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import org.omg.CORBA.portable.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 
@@ -140,6 +145,36 @@ public class FileUtil {
     	String bucket = bucketAndKey[0];
     	String key = bucketAndKey[1];
     	s3client.putObject(bucket, key, sourceFile);
+    }
+    
+    public static long getS3FileSize(String source) {
+    	String[] bucketAndKey = getBucketAndKey(source);
+    	String bucket = bucketAndKey[0];
+    	String key = bucketAndKey[1];
+    	S3Object obj = s3client.getObject(new GetObjectRequest(bucket, key));
+    	return obj.getObjectMetadata().getInstanceLength();
+    }
+    
+    public static void copyS3ToFile(String s3source, String targetFile) throws IOException {
+    	String[] bucketAndKey = getBucketAndKey(s3source);
+    	String bucket = bucketAndKey[0];
+    	String key = bucketAndKey[1];
+    	S3Object obj = s3client.getObject(new GetObjectRequest(bucket, key));
+    	InputStream is = null;
+    	FileOutputStream os = null;
+    	try {
+    		is = obj.getObjectContent();
+    		os = new FileOutputStream(targetFile);
+        	int readBytes = -1;
+        	byte[] buffer = new byte[8192];
+        	while((readBytes = is.read(buffer, 0, 8192)) != -1) {
+        		os.write(buffer, 0, readBytes);
+        	}
+        	os.flush();
+    	} finally {
+    		if(os != null) try{ os.close(); } catch(Exception e) {}
+    		if(is != null) try{ is.close(); } catch(Exception e) {}
+    	}
     }
     
     public static List<String> getFileList(String path) throws IOException {
