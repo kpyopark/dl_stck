@@ -127,11 +127,19 @@ public class FileUtil {
     		return MODEL_DIR_S3 + FILE_SEPARATOR + stockId + "_" + startDate + ".zip";
     }
     
-    public static Object[] getBucketAndKey(String path) {
+    public static String[] getBucketAndKey(String path) {
 		StringTokenizer st = new StringTokenizer(path.substring("s3://".length()), "/");
 		String bucketName = st.nextToken();
 		String key = path.substring("s3://".length() + bucketName.length() + "/".length());
-		return new Object[]{ bucketName, key };
+		return new String[]{ bucketName, key };
+    }
+    
+    public static void copyFileToS3(String source, String s3target) {
+    	File sourceFile = new File(source);
+    	String[] bucketAndKey = getBucketAndKey(s3target);
+    	String bucket = bucketAndKey[0];
+    	String key = bucketAndKey[1];
+    	s3client.putObject(bucket, key, sourceFile);
     }
     
     public static List<String> getFileList(String path) throws IOException {
