@@ -48,15 +48,16 @@ public class StockMultiLayerPredictor {
     
     public static void main(String[] args) throws  Exception {
     	List<String> closedDays = DailyStockDao.getClosedDay();
-    	String predictTargetDirectory = FileUtil.getDailyPrdictTargetDirectory(DailyStockDao.getLastDay(), closedDays);
-    	File csvDir = new File(predictTargetDirectory);
-    	String[] csvFiles = csvDir.list();
+    	String predictTargetDirectory = FileUtil.getDailyPredictTargetDirectory(DailyStockDao.getLastDay(), closedDays);
+    	List<String> csvFiles = FileUtil.getDailyPredictTargetList(predictTargetDirectory);
     	for(String csvFileName : csvFiles) {
     		if( csvFileName.contains("csv") ) {
+    			FileDelegator file = null;
     			try {
     				log.info("Target CSV File is " + predictTargetDirectory + "/" + csvFileName);
     				String fileFullPath = predictTargetDirectory + "/" + csvFileName;
-    				if(new File(fileFullPath).length() > 1000) {
+    				file = new FileDelegator(fileFullPath);
+    				if(file.getLength() > 1000) {
     					StockMultiLayerPredictor predictor = new StockMultiLayerPredictor(
     							FileUtil.DEFAULT_MODEL_PATH,
     							null,
@@ -67,6 +68,8 @@ public class StockMultiLayerPredictor {
     				}
     			} catch (Exception e) {
     				log.error(e.getMessage(),e);
+    			} finally {
+    				file.close();
     			}
     		}
     	}
@@ -263,8 +266,9 @@ public class StockMultiLayerPredictor {
     
     public void saveModel() throws Exception {
     	ModelSerializer.writeModel(model, 
-    			new File(this.modelPath), 
+    			file.getTempFile(), 
     			true);
+    	
     }
     
     public void loadModel() throws Exception {

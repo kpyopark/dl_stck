@@ -60,6 +60,12 @@ public class FileDelegator {
 		pw.println(content);
 	}
 	
+	public void flush() {
+		if(s3path) {
+			FileUtil.copyFileToS3(this.tempFile.getAbsolutePath(), this.path);
+		}
+	}
+	
 	public void close() {
 		if(pw != null)
 			pw.close();

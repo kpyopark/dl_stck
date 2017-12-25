@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -81,15 +82,19 @@ public class FileUtil {
     	return rtn;
     }
     
-    public static String getDailyPrdictTargetDirectory(String currentWorkDay, List<String> closeDays) {
+    public static String getDailyPredictTargetDirectory(String currentWorkDay, List<String> closeDays) {
     	if(LOCAL_FILE_SYSTEM)
     		return CSV_FILE_FOLDER_PATH_FS + File.separator + getNextWorkday(currentWorkDay, closeDays);
     	else
     		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + getNextWorkday(currentWorkDay, closeDays);
     }
     
+    public static List<String> getDailyPredictTargetList(String dailyTargetDirectory) throws IOException {
+    	return getFileList(dailyTargetDirectory);
+    }
+    
     public static String getDailyPredictTargetFilePath(String currentworkDay, List<String> closedDays, String stockId, String startDate) {
-    	return FileUtil.getDailyPrdictTargetDirectory(currentworkDay, 
+    	return FileUtil.getDailyPredictTargetDirectory(currentworkDay, 
 				DailyStockDao.getClosedDay()) + File.separator + stockId + "_" + startDate + ".csv";
     }
     
