@@ -54,9 +54,9 @@ public class StockMultiLayerPredictor {
     		if( csvFileName.contains("csv") ) {
     			FileDelegator file = null;
     			try {
-    				log.info("Target CSV File is " + predictTargetDirectory + "/" + csvFileName);
     				String fileFullPath = predictTargetDirectory + "/" + csvFileName;
     				file = new FileDelegator(fileFullPath);
+    				log.info("Target CSV File is " + predictTargetDirectory + "/" + csvFileName);
     				if(file.getLength() > 1000) {
     					StockMultiLayerPredictor predictor = new StockMultiLayerPredictor(
     							FileUtil.DEFAULT_MODEL_PATH,
@@ -164,7 +164,9 @@ public class StockMultiLayerPredictor {
             FileDelegator fileDelegator = null;
             try {
                 fileDelegator = new FileDelegator(trainFile);
-                recordReader.initialize(new FileSplit(fileDelegator.getTempFile()));
+                File tempFile = fileDelegator.getTempFile();
+                log.debug("Train File[" + trainFile + "] TEMPFILE[" + tempFile.getAbsolutePath() + "] : Size[" + tempFile.length() + "]");
+                recordReader.initialize(new FileSplit(tempFile));
                 DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader,batchSize);
                 mergedTarget.add(iterator.next());
             } finally {
