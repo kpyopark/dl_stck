@@ -1,6 +1,7 @@
 package com.elevenquest.dl.pipeline;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,21 +32,6 @@ public class MetricCreator {
 	
 	private static Logger log = LoggerFactory.getLogger(MetricCreator.class);
 	
-	public List<String> getValidBaseMLDataFileList() {
-		List<String> rtn = new ArrayList<String>();
-		File mldataDir = new File(FileUtil.getLearningBasePath());
-		File[] csvFiles = mldataDir.listFiles();
-		for(File mlDataCsv : csvFiles) {
-			if(mlDataCsv.getName().contains("csv") ||
-					mlDataCsv.length() > 30000) {
-				rtn.add(mlDataCsv.getAbsolutePath());
-			} else {
-				log.warn("This file[" + mlDataCsv.getName() + "] isn't valid.");
-			}
-		}
-		return rtn;
-	}
-	
 	public static PredictMetric getPredicMetricFromEvaluation(Evaluation eval) {
 		PredictMetric metric = new PredictMetric();
 		metric.setAccuracy((float)eval.accuracy());
@@ -65,8 +51,8 @@ public class MetricCreator {
 		return metric;
 	}
 	
-	public void makeModels() {
-		List<String> validSources = getValidBaseMLDataFileList();
+	public void makeModels() throws IOException {
+		List<String> validSources = FileUtil.getValidBaseMLDataFileList();
 		int count = 0;
 		for(String mlsource : validSources) {
 			count++;
@@ -94,7 +80,7 @@ public class MetricCreator {
 		}
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		MetricCreator creator = new MetricCreator();
 		creator.makeModels();
 	}

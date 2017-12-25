@@ -46,7 +46,7 @@ public class FileUtil {
     public final static String DEFAULT_MODEL_PATH = MODEL_DIR_FS + FILE_SEPARATOR + "Model.zip";
     public final static String ML_BASE_DATE = "20120101";
     
-    public final static boolean LOCAL_FILE_SYSTEM = "true".equals(System.getProperty("S3_ENABLED"));
+    public final static boolean LOCAL_FILE_SYSTEM = !"true".equals(System.getProperty("S3_ENABLED"));
     /*
     final static String[] TRAIN_CSV_PATHS = { 
     		"E:/Document/A005930_20130101_org.csv", 
@@ -92,7 +92,7 @@ public class FileUtil {
     	if(LOCAL_FILE_SYSTEM)
     		return CSV_FILE_FOLDER_PATH_FS + File.separator + BASE_DATA_FOLDER;
     	else
-    		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + BASE_DATA_FOLDER;
+    		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + BASE_DATA_FOLDER + FILE_SEPARATOR;
     }
     
 	public static String getBaseDataCsvFilePath(String startDate, String stockId) {
@@ -167,9 +167,31 @@ public class FileUtil {
     }
     
     public static void main(String[] args) throws IOException {
-    	for(String name : getFileList("s3://mldata-base/model/")) {
+    	for(String name : getValidBaseMLDataFileList()) {
     		log.info("filename : [" + name + "]");
     	}
     }
     
+	public static List<String> getValidBaseMLDataFileList() throws IOException {
+		List<String> rtn = new ArrayList<String>();
+		String filePath = FileUtil.getLearningBasePath();
+		if(LOCAL_FILE_SYSTEM) {
+			File mldataDir = new File(filePath);
+			File[] csvFiles = mldataDir.listFiles();
+			for(File mlDataCsv : csvFiles) {
+				if(mlDataCsv.getName().contains("csv") ||
+						mlDataCsv.length() > 30000) {
+					rtn.add(mlDataCsv.getAbsolutePath());
+				} else {
+					log.warn("This file[" + mlDataCsv.getName() + "] isn't valid.");
+				}
+			}
+		} else {
+			List<String> fileNames = getFileList(filePath);
+			for(String fileName : fileNames) 
+				rtn.add(filePath + fileName);
+		}
+		return rtn;
+	}
+	
 }
