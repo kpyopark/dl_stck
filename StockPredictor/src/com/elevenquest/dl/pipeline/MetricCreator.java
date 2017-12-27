@@ -87,6 +87,7 @@ public class MetricCreator {
 	public static void main(String[] args) throws IOException {
 		AmazonWebServiceClient client = new AmazonS3Client();
 		LogManager manager = LogManager.getLogManager();
+		
 		System.out.println("############## LOGMANAGER :" + manager);
 		Enumeration<String> names = manager.getLoggerNames();
 		while(names.hasMoreElements()) {
