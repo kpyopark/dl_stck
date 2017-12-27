@@ -277,7 +277,7 @@ public class StockMultiLayerPredictor {
     }
     
     public void loadModel() throws Exception {
-    	this.model = ModelSerializer.restoreMultiLayerNetwork(this.modelPath);
+    	this.model = ModelSerializer.restoreMultiLayerNetwork(file.getTempFile());
     }
     
     public Evaluation predict() {
