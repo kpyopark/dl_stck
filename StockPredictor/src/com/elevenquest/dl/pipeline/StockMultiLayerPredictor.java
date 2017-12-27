@@ -47,6 +47,10 @@ public class StockMultiLayerPredictor {
     public static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
     
     public static void main(String[] args) throws  Exception {
+    	predictDailyMetric();
+    }
+    
+    public static void predictDailyMetric() throws Exception {
     	List<String> closedDays = DailyStockDao.getClosedDay();
     	String predictTargetDirectory = FileUtil.getDailyPredictTargetDirectory(DailyStockDao.getLastDay(), closedDays);
     	List<String> csvFiles = FileUtil.getDailyPredictTargetList(predictTargetDirectory);
@@ -73,7 +77,6 @@ public class StockMultiLayerPredictor {
     			}
     		}
     	}
-    	
     }
     
     String modelPath;

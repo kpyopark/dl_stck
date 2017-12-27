@@ -9,9 +9,14 @@ public class BaseDataCreator {
 	public static void main(String[] args) {
 		List<String> targetCompanyIds = DailyStockDao.getTargetCompanies(2000);
 		String startDate = "20120101";
+		String targetStockId = "A000020";
 		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));
-		for(String stockId : targetCompanyIds) {
-			DbToCsvConverter.makeCsv(stockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, stockId));
-		}		
+		if (targetStockId != null) {
+			DbToCsvConverter.makeCsv(targetStockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, targetStockId));
+		} else {
+			for(String stockId : targetCompanyIds) {
+				DbToCsvConverter.makeCsv(stockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, stockId));
+			}		
+		}
 	}
 }

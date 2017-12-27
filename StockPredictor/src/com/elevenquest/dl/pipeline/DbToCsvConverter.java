@@ -25,13 +25,20 @@ public class DbToCsvConverter {
 	private static void printBody(FileDelegator out, ResultSet rs) throws SQLException, IOException {
 		StringBuffer oneLine = null;
 		ResultSetMetaData rsmd = rs.getMetaData();
+		boolean hasNullValue = false;
 		while(rs.next()) {
+			hasNullValue = false;
 			oneLine = new StringBuffer();
-			for(int column = 0 ; column < rsmd.getColumnCount() ; column++) {
+			for(int column = 0 ; !hasNullValue && column < rsmd.getColumnCount() ; column++) {
 				Object value = rs.getObject(column + 1);
-				oneLine.append(",").append(value != null ? value : "");
+				if (value == null) {
+					hasNullValue = true; 
+					continue;
+				}
+				oneLine.append(",").append(value);
 			}
-			out.println(oneLine.substring(1));
+			if(!hasNullValue)
+				out.println(oneLine.substring(1));
 		}
 	}
 	
