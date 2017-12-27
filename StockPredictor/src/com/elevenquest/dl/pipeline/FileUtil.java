@@ -107,7 +107,7 @@ public class FileUtil {
     
 	public static String getBaseDataCsvFilePath(String startDate, String stockId) {
 		String basePath = FileUtil.getLearningBasePath();
-		if(FILE_SEPARATOR.equals(basePath.charAt(basePath.length()-1))) {
+		if(FILE_SEPARATOR.equals(basePath.substring(basePath.length()-1))) {
 			return FileUtil.getLearningBasePath() + stockId + "_" + startDate + ".csv";
 		} else {
 			return FileUtil.getLearningBasePath() + File.separator + stockId + "_" + startDate + ".csv";
@@ -212,9 +212,7 @@ public class FileUtil {
     }
     
     public static void main(String[] args) throws IOException {
-    	for(String name : getValidBaseMLDataFileList()) {
-    		log.info("filename : [" + name + "]");
-    	}
+    	System.out.println("/".equals("MLData/".substring("MLData/".length()-1)));
     }
     
 	public static List<String> getValidBaseMLDataFileList() throws IOException {
