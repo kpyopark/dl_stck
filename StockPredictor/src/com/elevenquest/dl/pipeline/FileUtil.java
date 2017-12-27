@@ -106,7 +106,12 @@ public class FileUtil {
     }
     
 	public static String getBaseDataCsvFilePath(String startDate, String stockId) {
-		return FileUtil.getLearningBasePath() + File.separator + stockId + "_" + startDate + ".csv";
+		String basePath = FileUtil.getLearningBasePath();
+		if(FILE_SEPARATOR.equals(basePath.charAt(basePath.length()-1))) {
+			return FileUtil.getLearningBasePath() + stockId + "_" + startDate + ".csv";
+		} else {
+			return FileUtil.getLearningBasePath() + File.separator + stockId + "_" + startDate + ".csv";
+		}
 	}
 	
 	public static String getStockIdFromBaseDataCsvFilePath(String filePath) {
