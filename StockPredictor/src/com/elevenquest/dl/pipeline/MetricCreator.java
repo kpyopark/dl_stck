@@ -1,15 +1,19 @@
 package com.elevenquest.dl.pipeline;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
 
 import org.deeplearning4j.eval.ConfusionMatrix;
 import org.deeplearning4j.eval.Evaluation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazonaws.AmazonWebServiceClient;
+import com.amazonaws.services.logs.AWSLogsClient;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 import com.elevenquest.dl.pipeline.post.PredictMetric;
 
@@ -81,6 +85,17 @@ public class MetricCreator {
 	}
 	
 	public static void main(String[] args) throws IOException {
+		AmazonWebServiceClient client = new AmazonS3Client();
+		LogManager manager = LogManager.getLogManager();
+		System.out.println("############## LOGMANAGER :" + manager);
+		Enumeration<String> names = manager.getLoggerNames();
+		while(names.hasMoreElements()) {
+			System.out.println("logger:" + names.nextElement());
+		}
+		java.util.logging.Logger logger = LogManager.getLogManager().getLogger("com.amazonaws.request");
+		if(logger != null) {
+			logger.setLevel(Level.OFF);
+		}
 		MetricCreator creator = new MetricCreator();
 		creator.makeModels();
 	}
