@@ -6,10 +6,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.elevenquest.dl.pipeline.post.PredictMetric;
 
 public class DailyStockDao extends BaseDao {
+	private static Logger log = LoggerFactory.getLogger(DailyStockDao.class);
 
 	public static String getDailyStockLearningDataQuery(String stockId, String startDate) {
 		return "with tb_tx_date as ( \n" + 
@@ -762,21 +765,21 @@ public class DailyStockDao extends BaseDao {
 			ResultSet rs = stmt.executeQuery();
 			if(rs.next()) {
 				oldOne = new PredictMetric();
-				metric.setLearnCount(rs.getInt("learn_count"));
-				metric.setTotalCount(rs.getInt("total_count"));
-				metric.setAccuracy(rs.getFloat("accuracy"));
-				metric.setPrecisions(rs.getFloat("precisions"));
-				metric.setRecall(rs.getFloat("recall"));
-				metric.setScore(rs.getFloat("score"));
-				metric.setResult00(rs.getInt("result00"));
-				metric.setResult01(rs.getInt("result01"));
-				metric.setResult02(rs.getInt("result02"));
-				metric.setResult10(rs.getInt("result10"));
-				metric.setResult11(rs.getInt("result11"));
-				metric.setResult12(rs.getInt("result12"));
-				metric.setResult20(rs.getInt("result20"));
-				metric.setResult21(rs.getInt("result21"));
-				metric.setResult22(rs.getInt("result22"));
+				oldOne.setLearnCount(rs.getInt("learn_count"));
+				oldOne.setTotalCount(rs.getInt("total_count"));
+				oldOne.setAccuracy(rs.getFloat("accuracy"));
+				oldOne.setPrecisions(rs.getFloat("precisions"));
+				oldOne.setRecall(rs.getFloat("recall"));
+				oldOne.setScore(rs.getFloat("score"));
+				oldOne.setResult00(rs.getInt("result00"));
+				oldOne.setResult01(rs.getInt("result01"));
+				oldOne.setResult02(rs.getInt("result02"));
+				oldOne.setResult10(rs.getInt("result10"));
+				oldOne.setResult11(rs.getInt("result11"));
+				oldOne.setResult12(rs.getInt("result12"));
+				oldOne.setResult20(rs.getInt("result20"));
+				oldOne.setResult21(rs.getInt("result21"));
+				oldOne.setResult22(rs.getInt("result22"));
 			}
 		} finally {
 			if(con != null) try { con.close(); } catch (Exception e) {}

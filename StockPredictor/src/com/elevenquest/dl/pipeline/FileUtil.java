@@ -161,18 +161,26 @@ public class FileUtil {
     	String[] bucketAndKey = getBucketAndKey(source);
     	String bucket = bucketAndKey[0];
     	String key = bucketAndKey[1];
-    	S3Object obj = s3client.getObject(new GetObjectRequest(bucket, key));
-    	return obj.getObjectMetadata().getInstanceLength();
+    	S3Object obj = null;
+        long length = -1;
+        try {
+            obj = s3client.getObject(new GetObjectRequest(bucket, key));
+    	    length = obj.getObjectMetadata().getInstanceLength();
+        } finally {
+            if (obj != null) try { obj.close(); } catch (Exception e) { log.warn(e.toString()); }
+        }
+    	return length;
     }
     
     public static void copyS3ToFile(String s3source, String targetFile) throws IOException {
     	String[] bucketAndKey = getBucketAndKey(s3source);
     	String bucket = bucketAndKey[0];
     	String key = bucketAndKey[1];
-    	S3Object obj = s3client.getObject(new GetObjectRequest(bucket, key));
+    	S3Object obj = null;
     	InputStream is = null;
     	FileOutputStream os = null;
     	try {
+            obj = s3client.getObject(new GetObjectRequest(bucket, key));
     		is = obj.getObjectContent();
     		os = new FileOutputStream(targetFile);
         	int readBytes = -1;
@@ -184,6 +192,7 @@ public class FileUtil {
     	} finally {
     		if(os != null) try{ os.close(); } catch(Exception e) {}
     		if(is != null) try{ is.close(); } catch(Exception e) {}
+            if(obj != null) try { obj.close(); } catch(Exception e) {}
     	}
     }
     
@@ -198,9 +207,9 @@ public class FileUtil {
     		request.setPrefix(prefix);
     		ObjectListing objects = s3client.listObjects(request);
     		for(S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
-    			log.debug(objectSummary.toString());
-    			if(objectSummary.getSize() > 0)
-    				rtn.add(objectSummary.getKey().substring(prefix.length()));
+        		log.debug(objectSummary.toString());
+    		   	if(objectSummary.getSize() > 0)
+    		   		rtn.add(objectSummary.getKey().substring(prefix.length()));
     		}
     	} else {
     		// normal file system.
