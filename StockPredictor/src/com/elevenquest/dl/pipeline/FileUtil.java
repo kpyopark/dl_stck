@@ -46,7 +46,7 @@ public class FileUtil {
 	private final static String FILE_SEPARATOR = "/";
 	public final static String CSV_FILE_FOLDER_PATH_S3 = "s3://mldata-base";
 	public final static String CSV_FILE_FOLDER_PATH_FS = "E:/Document/04.AI";
-    public final static String MODEL_DIR_S3 = "S3://mldata-base/model";
+    public final static String MODEL_DIR_S3 = "s3://mldata-base/model";
     public final static String MODEL_DIR_FS = "E:/Document/04.AI/Model";
     public final static String BASE_DATA_FOLDER = "BaseML";
     public final static String DEFAULT_MODEL_PATH = MODEL_DIR_FS + FILE_SEPARATOR + "Model.zip";

@@ -64,8 +64,10 @@ public class MetricCreator {
 			try {
 				String stockId = FileUtil.getStockIdFromBaseDataCsvFilePath(mlsource);
 				String baseDt = FileUtil.getStartDateFromBaseDataCsvFilePath(mlsource);
+                String modelPath = FileUtil.getStockModelPath(baseDt, stockId);
+			    log.info("Model Path : [" + modelPath + "]");
 				StockMultiLayerPredictor modelMaker = new StockMultiLayerPredictor(
-						FileUtil.getStockModelPath(baseDt, stockId),
+						modelPath,
 						mlsource, 
 						false /* predictYn */,
 						true /* prefer to reuse exist model. */);

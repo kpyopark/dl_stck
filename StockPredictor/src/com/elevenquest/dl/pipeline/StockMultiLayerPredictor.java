@@ -101,6 +101,7 @@ public class StockMultiLayerPredictor {
     			file.getLength();
     			modelExist = true;
     		} catch (Exception e) {
+                log.warn("This model file doens't exist or can't be accessed.:" + this.modelPath);
     			modelExist = false;
     		}
     	}
@@ -273,6 +274,7 @@ public class StockMultiLayerPredictor {
     	ModelSerializer.writeModel(model, 
     			file.getTempFile(), 
     			true);
+        file.flush();
     	
     }
     
