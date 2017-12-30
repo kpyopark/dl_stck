@@ -21,6 +21,7 @@
 	<logger name="com.amazonaws.request" level="WARN" />
 	<logger name="org.apache.http.wire" level="WARN" />
 	<logger name="httpclient.wire" level="WARN" />
+	<logger name="com.elevenquest.dl" level="DEBUG" />
 	<root level="WARN">
 		<appender-ref ref="STDOUT" />
 	</root>
