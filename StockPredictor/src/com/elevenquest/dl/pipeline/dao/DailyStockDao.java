@@ -622,8 +622,8 @@ public class DailyStockDao extends BaseDao {
  
 	}
 
-	public static List<String> getTargetCompanies(int limit) {
-		ArrayList<String> list = new ArrayList<String>();
+	public static List<String[]> getTargetCompanies(int limit) {
+		ArrayList<String[]> list = new ArrayList<String[]>();
 		// MC top 500 && Stock Price < 20,000
 		String query = "with tb_lastday as ( "+
 			"select max(standard_date) last_date "+
@@ -642,13 +642,83 @@ public class DailyStockDao extends BaseDao {
 			con = getConnection();
 			rs = con.createStatement().executeQuery(query);
 			while(rs.next())
-				list.add(rs.getString("stock_id"));
+				list.add(new String[] {
+						rs.getString("stock_id"),
+						rs.getString("company_name")
+				});
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			if(con!= null) try {con.close(); }catch(Exception e) {}
 		}
 		return list;
+	}
+	
+	public static float getCorrelation(String startDate, String endDate, String stockId, String stockIdCompared) {
+		String query = "with  " +
+				"tb_company_a as ( " +
+				"select standard_date,  " +
+				"       stock_price, " +
+				"       lag(stock_price, 1) over (order by standard_date) prev_stock_price " +
+				"  from tb_company_stock_daily " +
+				" where stock_id = '" + stockId + "'  " +
+				"   and standard_date between '" + startDate + "' and '" + endDate + "' " +
+				") " +
+				", tb_company_a_ratio as ( " +
+				"select standard_date,  " +
+				"       log(stock_price::float / prev_stock_price) as roi_ratio " +
+				"  from tb_company_a " +
+				") " +
+				", tb_company_b as ( " +
+				"select standard_date,  " +
+				"       stock_price, " +
+				"       lag(stock_price, 1) over (order by standard_date) prev_stock_price " +
+				"  from tb_company_stock_daily " +
+				" where stock_id = '" + stockIdCompared + "'  " +
+				"   and standard_date between '" + startDate + "' and '" + endDate + "' " +
+				") " +
+				", tb_company_b_ratio as ( " +
+				"select standard_date,  " +
+				"       log(stock_price::float / prev_stock_price) as roi_ratio " +
+				"  from tb_company_b " +
+				") " +
+				"select corr(a.roi_ratio, b.roi_ratio) " +
+				"  from tb_company_a_ratio a join tb_company_b_ratio b using (standard_date) ";
+		Connection con = null;
+		ResultSet rs = null;
+		float rtn = 0;
+		try {
+			con = getConnection();
+			rs = con.createStatement().executeQuery(query);
+			while(rs.next())
+				rtn = rs.getFloat(1);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if(con!= null) try {con.close(); }catch(Exception e) {}
+		}
+		return rtn;
+		
+	}
+	
+	static final String INSERT_CORR_MATRIX = 
+			"INSERT INTO tb_corr_matrix (start_date, end_date, stock_id_a, stock_id_b, corr_ratio) values (?,?,?,?,?) " + 
+			"ON CONFLICT (start_date, end_date, stock_id_a, stock_id_b) do update set corr_ratio = excluded.corr_ratio ";
+	
+	public static void insertCorrValue(String startDate, String endDate, String stockA, String stockB, float roiCorr) throws SQLException {
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(INSERT_CORR_MATRIX);
+			stmt.setString(1, startDate);
+			stmt.setString(2, endDate);
+			stmt.setString(3, stockA);
+			stmt.setString(4, stockB);
+			stmt.setFloat(5, roiCorr);
+			stmt.executeUpdate();
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}		
 	}
 	
 	public static String getLastDay() {
@@ -793,5 +863,38 @@ public class DailyStockDao extends BaseDao {
 		rs = con.createStatement().executeQuery(getDailyStockLearningDataQuery(stockId, startDate));
 		return rs;
 	}
-
+	
+	public static List<String> getTopNCorrelatedStocks(String stockId, boolean isDesc) throws SQLException {
+		List<String> rtn = new ArrayList<String>();
+		
+		String query = null;
+		if (isDesc) 
+			query = "select start_date, end_date, stock_id_a, stock_id_b, corr_ratio " +
+				"  from tb_corr_matrix " +
+				" where stock_id_a <> stock_id_b " +
+				"   and stock_id_a = '" + stockId +"' " +
+				" order by corr_ratio desc " +
+				" limit 3 ";
+		else
+			query = "select start_date, end_date, stock_id_a, stock_id_b, corr_ratio "+
+					"  from tb_corr_matrix "+
+					" where stock_id_a <> stock_id_b "+
+					"  and stock_id_a = '" + stockId +"' "+
+					"  and stock_id_b <> 'A114800' "+
+					" order by corr_ratio  "+
+					" limit 3 ";
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(query);
+			ResultSet rs = stmt.executeQuery();
+			while(rs.next()) {
+				rtn.add(rs.getString("stock_id_b"));
+			}
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}
+		return rtn;
+	}
+	
 }

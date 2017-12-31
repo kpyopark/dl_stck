@@ -64,14 +64,14 @@ public class DbToCsvConverter {
 	}
 	
 	public static void main(String[] args) {
-		List<String> targetCompanyIds = DailyStockDao.getTargetCompanies(50);
+		List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
 		String startDate = "20160101";
 		String lastDate = DailyStockDao.getLastDay();
 		System.out.println(lastDate);
 		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));
-		for(String stockId : targetCompanyIds) {
-			makeCsv(stockId, startDate, 
-					FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(), stockId, startDate));
+		for(String[] stockIdAndName : targetCompanyIdAndNames) {
+			makeCsv(stockIdAndName[0], startDate, 
+					FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(), stockIdAndName[0], startDate));
 		}
 	}
 	

@@ -80,7 +80,7 @@ public class StockMultiLayerPredictor {
     }
     
     String modelPath;
-    String learningSource;
+    String[] learningSources;
     
     FileDelegator file = null;
     boolean predictYn = false;
@@ -88,11 +88,11 @@ public class StockMultiLayerPredictor {
     boolean modelExist = false;
     
     public StockMultiLayerPredictor(String modelPath, 
-    		String learningSource,
+    		String[] learningSources,
     		boolean predictYn, 
     		boolean preferReusedModel) {
     	this.modelPath = modelPath;
-    	this.learningSource = learningSource;
+    	this.learningSources = learningSources;
     	this.predictYn = predictYn;
     	this.preferReusedModel = preferReusedModel;
     	if(modelPath != null) {
@@ -110,7 +110,7 @@ public class StockMultiLayerPredictor {
     public Evaluation train() throws Exception {
     	if(this.predictYn)
     		throw new Exception("This predictor in on prediction mode. It can't be trained. You should make this class instance with false value in predictYn field.");
-    	readData(new String[]{learningSource});
+    	readData(learningSources);
     	makeLabels(thresholds);
     	if(preferReusedModel && modelExist) {
         	loadModel();
@@ -125,9 +125,7 @@ public class StockMultiLayerPredictor {
     public Evaluation trainWithPrevModel() throws Exception {
     	if(this.predictYn)
     		throw new Exception("This predictor in on prediction mode. It can't be trained. You should make this class instance with false value in predictYn field.");
-    	readData(new String[] {
-    		learningSource
-    	});
+    	readData(learningSources);
     	makeLabels(thresholds);
     	loadModel();
     	trainModel();
@@ -264,10 +262,26 @@ public class StockMultiLayerPredictor {
     
     public Evaluation evaluate() {
         eval = new Evaluation(outputNum);
-        INDArray output = model.output(testData.getFeatureMatrix());
-        eval.eval(testData.getLabels(), output);
+        DataSet testTarget = null;
+        log.info("original test data set # :" + testData.numExamples());
+        log.info("original test data set input # :" + testData.numInputs());
+        log.info("original test data set output # :" + testData.numOutcomes());
+        if(testData.numExamples() > 400) {
+        	testTarget = testData.splitTestAndTrain(0.5).getTest();
+        } else {
+        	testTarget = testData;
+        }
+        log.info("test data set # :" + testTarget.numExamples());
+        INDArray featureMatrix = testTarget.getFeatureMatrix();
+        log.info("Feature Matrix Shapes:" + featureMatrix.shapeInfoToString());
+        INDArray output = model.output(featureMatrix);
+        eval.eval(testTarget.getLabels(), output);
         log.info(eval.stats());
         return eval;
+    }
+    
+    public double getModelScore() {
+    	return model.score();
     }
     
     public void saveModel() throws Exception {
@@ -282,7 +296,7 @@ public class StockMultiLayerPredictor {
     	this.model = ModelSerializer.restoreMultiLayerNetwork(file.getTempFile());
     }
     
-    public Evaluation predict() {
+    private Evaluation predict() {
     	DataSet copySet = allData.copy();
         DataNormalization normalizer = new NormalizerStandardize();
         normalizer.fit(copySet);

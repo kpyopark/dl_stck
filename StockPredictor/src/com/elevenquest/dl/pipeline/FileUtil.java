@@ -83,35 +83,45 @@ public class FileUtil {
     }
     
     public static String getDailyPredictTargetDirectory(String currentWorkDay, List<String> closeDays) {
-    	if(LOCAL_FILE_SYSTEM)
-    		return CSV_FILE_FOLDER_PATH_FS + File.separator + getNextWorkday(currentWorkDay, closeDays);
-    	else
-    		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + getNextWorkday(currentWorkDay, closeDays);
+		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + getNextWorkday(currentWorkDay, closeDays);
     }
     
     public static List<String> getDailyPredictTargetList(String dailyTargetDirectory) throws IOException {
-    	return getFileList(dailyTargetDirectory);
+    	return getFilteredFileList(dailyTargetDirectory, "csv", 10000);
     }
     
     public static String getDailyPredictTargetFilePath(String currentworkDay, List<String> closedDays, String stockId, String startDate) {
     	return FileUtil.getDailyPredictTargetDirectory(currentworkDay, 
-				DailyStockDao.getClosedDay()) + File.separator + stockId + "_" + startDate + ".csv";
+				DailyStockDao.getClosedDay()) + FILE_SEPARATOR + stockId + "_" + startDate + ".csv";
     }
     
-    public static String getLearningBasePath() {
-    	if(LOCAL_FILE_SYSTEM)
-    		return CSV_FILE_FOLDER_PATH_FS + File.separator + BASE_DATA_FOLDER;
-    	else
-    		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + BASE_DATA_FOLDER + FILE_SEPARATOR;
+    public static String getLearningBaseFolder() {
+		return CSV_FILE_FOLDER_PATH_S3 + FILE_SEPARATOR + BASE_DATA_FOLDER;
     }
     
 	public static String getBaseDataCsvFilePath(String startDate, String stockId) {
-		String basePath = FileUtil.getLearningBasePath();
+		String basePath = FileUtil.getLearningBaseFolder();
 		if(FILE_SEPARATOR.equals(basePath.substring(basePath.length()-1))) {
-			return FileUtil.getLearningBasePath() + stockId + "_" + startDate + ".csv";
+			return basePath + stockId + "_" + startDate + ".csv";
 		} else {
-			return FileUtil.getLearningBasePath() + File.separator + stockId + "_" + startDate + ".csv";
+			return basePath + FILE_SEPARATOR + stockId + "_" + startDate + ".csv";
 		}
+	}
+	
+	public static String[] getBaseDataCsvFilePaths(String startDate, List<String> stockIds) {
+		String[] param = new String[stockIds.size()];
+		stockIds.toArray(param);
+		return getBaseDataCsvFilePaths(startDate, param);
+	}
+	
+	public static String[] getBaseDataCsvFilePaths(String startDate, String[] stockIds) {
+		List<String> list = new ArrayList<String>();
+		for(String id: stockIds) {
+			list.add(getBaseDataCsvFilePath(startDate, id));
+		}
+		String[] rtn = new String[list.size()];
+		list.toArray(rtn);
+		return rtn;
 	}
 	
 	public static String getStockIdFromBaseDataCsvFilePath(String filePath) {
@@ -134,12 +144,16 @@ public class FileUtil {
 		st.nextToken();
 		return st.nextToken();
 	}
+	
+	public static String getStockModelFolder() {
+    	if(LOCAL_FILE_SYSTEM)
+    		return MODEL_DIR_FS;
+    	else
+    		return MODEL_DIR_S3;
+	}
 
     public static String getStockModelPath(String startDate, String stockId) {
-    	if(LOCAL_FILE_SYSTEM)
-    		return MODEL_DIR_FS + File.separator + stockId + "_" + startDate + ".zip";
-    	else
-    		return MODEL_DIR_S3 + FILE_SEPARATOR + stockId + "_" + startDate + ".zip";
+    	return getStockModelFolder() + FILE_SEPARATOR + stockId + "_" + startDate + ".zip"; 
     }
     
     public static String[] getBucketAndKey(String path) {
@@ -196,7 +210,7 @@ public class FileUtil {
     	}
     }
     
-    public static List<String> getFileList(String path) throws IOException {
+    public static List<String> getFilteredFileList(String path, String containedValue, long minLength) throws IOException {
     	List<String> rtn = new ArrayList<String>();
     	if(path.indexOf("s3") == 0) {
     		// s3 file system.
@@ -208,42 +222,44 @@ public class FileUtil {
     		ObjectListing objects = s3client.listObjects(request);
     		for(S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
         		log.debug(objectSummary.toString());
-    		   	if(objectSummary.getSize() > 0)
-    		   		rtn.add(objectSummary.getKey().substring(prefix.length()));
+        		String fileName = objectSummary.getKey().substring(prefix.length()); 
+    		   	if(objectSummary.getSize() > minLength && fileName.contains(containedValue))
+    		   		rtn.add(fileName);
     		}
     	} else {
     		// normal file system.
     		File mldataDir = new File(path);
     		File[] files = mldataDir.listFiles();
-    		for(File file : files) rtn.add(file.getName());
+    		for(File file : files) {
+    			if(file.length() > minLength && file.getName().contains(containedValue))
+                rtn.add(file.getName());
+    		}
     	}
     	return rtn;
     }
     
     public static void main(String[] args) throws IOException {
-    	System.out.println("/".equals("MLData/".substring("MLData/".length()-1)));
+    	for(String filePath: getValidModelFileList()) System.out.println(filePath);
     }
     
 	public static List<String> getValidBaseMLDataFileList() throws IOException {
 		List<String> rtn = new ArrayList<String>();
-		String filePath = FileUtil.getLearningBasePath();
-		if(LOCAL_FILE_SYSTEM) {
-			File mldataDir = new File(filePath);
-			File[] csvFiles = mldataDir.listFiles();
-			for(File mlDataCsv : csvFiles) {
-				if(mlDataCsv.getName().contains("csv") ||
-						mlDataCsv.length() > 30000) {
-					rtn.add(mlDataCsv.getAbsolutePath());
-				} else {
-					log.warn("This file[" + mlDataCsv.getName() + "] isn't valid.");
-				}
-			}
-		} else {
-			List<String> fileNames = getFileList(filePath);
-			for(String fileName : fileNames) 
-				rtn.add(filePath + fileName);
-		}
+		String filePath = FileUtil.getLearningBaseFolder();
+		List<String> fileNames = getFilteredFileList(filePath, "csv", 30000);
+		for(String fileName : fileNames) 
+			rtn.add(filePath + fileName);
 		return rtn;
 	}
+	
+	public static List<String> getValidModelFileList() throws IOException {
+		List<String> rtn = new ArrayList<String>();
+		String filePath = FileUtil.getStockModelFolder();
+		List<String> fileNames = getFilteredFileList(filePath, "zip", 30000);
+		for(String fileName : fileNames) 
+			rtn.add(filePath + fileName);
+		return rtn;
+	}
+	
+
 	
 }

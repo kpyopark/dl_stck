@@ -7,15 +7,15 @@ import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 public class BaseDataCreator {
 	
 	public static void main(String[] args) {
-		List<String> targetCompanyIds = DailyStockDao.getTargetCompanies(2000);
+		List<String[]> targetCompanyIds = DailyStockDao.getTargetCompanies(2000);
 		String startDate = "20120101";
 		String targetStockId = "A000020";
 		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));
 		if (targetStockId != null) {
 			DbToCsvConverter.makeCsv(targetStockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, targetStockId));
 		} else {
-			for(String stockId : targetCompanyIds) {
-				DbToCsvConverter.makeCsv(stockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, stockId));
+			for(String[] stockIdAndName : targetCompanyIds) {
+				DbToCsvConverter.makeCsv(stockIdAndName[0], startDate, FileUtil.getBaseDataCsvFilePath(startDate, stockIdAndName[0]));
 			}		
 		}
 	}
