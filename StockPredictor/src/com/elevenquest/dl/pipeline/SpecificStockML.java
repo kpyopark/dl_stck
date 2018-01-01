@@ -25,6 +25,7 @@ public class SpecificStockML {
 	private final static String TARGET_MODEL = "A002320";
 	
 	private final static float RENEWAL_THRESHOLD = 0.4f;
+	private final static float SKIP_THRESHOLD = 0.8f;
 	
 	private final static String[] LEARNING_DATA_LIST = {
 		TARGET_MODEL, 
@@ -36,7 +37,50 @@ public class SpecificStockML {
 		// checkModelExistAndTopCompanies();
 		// regressionMatrix();
 		// trainMultipleStocks();
-		trainSpecificStocks("A002320");
+		String[] targets = {
+//				"A161390",
+//				"A139480",
+//				"A096770",
+//				"A066570",
+//				"A128940",
+//				"A086790",
+//				"A055550",
+//				"A033780",
+//				"A003550",
+//				"A069500",
+//				"A005490",
+//				"A000660",
+//				"A035250",
+//				"A012330",
+//				"A000270",
+//				"A005930",
+//				"A004020",
+//				"A036570",
+				// "A010130",	-- Out of Memory
+				"A105560",
+				"A010950",
+				"A017670",
+				"A018260",
+				"A021240",
+				"A051900",
+				"A034730",
+				"A051910",
+				"A024110",
+				"A011170",
+				"A034220",
+				"A006400",
+				"A000810",
+				"A005935",
+				"A009150",
+				"A005380",
+				"A015760"
+		};
+		int count = 0;
+		for(String targetStockId : targets) {
+			count++;
+			log.info("################### [" + count + "/" + targets.length + "] - " + targetStockId + " #################");
+			trainSpecificStocks(targetStockId);
+		}
 	}
 	
 	public static void regressionMatrix() throws IOException {
@@ -91,26 +135,22 @@ public class SpecificStockML {
 			int times) {
 		PredictMetric lastMetric = null;
 		String[] relatedStocks = new String[2];
+		if(mostCorrelateds == null || mostCorrelateds.size() < 1) {
+			mostCorrelateds = new ArrayList<String>();
+			mostCorrelateds.add(stockId);
+		}
+		if(mostUncorrelateds == null || mostUncorrelateds.size() < 1) {
+			mostUncorrelateds = new ArrayList<String>();
+			mostUncorrelateds.add(stockId);
+		}
 		relatedStocks[1] = stockId;
 		// Many Input make the OOM. So cut thie input files just two files.
 		// For 1 time, Make model and training.
 		if(needRenew) {
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), needRenew);
-			// For 2 times. Training with uncorrelated ones.
+			// For 1 times. Training with uncorrelated ones.
 			relatedStocks[0] = mostUncorrelateds.get((int)Math.floor(mostUncorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			relatedStocks[0] = mostUncorrelateds.get((int)Math.floor(mostUncorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			// For 2 times, Training with correlated ones.
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			// For 2 times, Training with original ones.
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
-		} else {
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), needRenew);
 			// For 3 times, Training with correlated ones.
 			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
@@ -118,10 +158,28 @@ public class SpecificStockML {
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
 			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			// For 1 times. Training with uncorrelated ones.
-			relatedStocks[0] = mostUncorrelateds.get((int)Math.floor(mostUncorrelateds.size() * Math.random()));
+			// For 1 times, Training with original ones.
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
+		} else {
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), needRenew);
+			/*
+			// For 4 times, Training with correlated ones.
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			// For 2 times, Training with original ones.
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			// For 1 times, Training with correlated ones.
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			*/
+			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 		}
@@ -135,8 +193,12 @@ public class SpecificStockML {
 			List<String> mostUncorrelateds = DailyStockDao.getTopNCorrelatedStocks(stockId, false);
 			log.debug("Learning target is " + String.join(",", mostCorrelateds));
 			log.debug("Learning target is " + String.join(",", mostUncorrelateds));
-			boolean needModelRenew = DailyStockDao.getLastPredictMetric(stockId).getAccuracy() < RENEWAL_THRESHOLD;
-			trainWithOtherStocks(creator, stockId, modelPath, mostCorrelateds, mostUncorrelateds, needModelRenew, 3);
+			float accuracy = DailyStockDao.getLastPredictMetric(stockId).getAccuracy();
+			log.debug("Accuracy is " + accuracy);
+			if(accuracy > SKIP_THRESHOLD)
+				return lastMetric;
+			boolean needModelRenew = accuracy < RENEWAL_THRESHOLD;
+			lastMetric = trainWithOtherStocks(creator, stockId, modelPath, mostCorrelateds, mostUncorrelateds, needModelRenew, 3);
 		} catch (SQLException sqle) {
 			sqle.printStackTrace();
 		}

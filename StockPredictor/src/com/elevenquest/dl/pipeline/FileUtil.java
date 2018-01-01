@@ -69,10 +69,11 @@ public class FileUtil {
     	try {
     		Date nextDay = DATE_FORMAT.parse(currentWorkDay);
     		Calendar c = Calendar.getInstance();
-    		int dayofweek = c.get(Calendar.DAY_OF_WEEK);
+			c.setTime(nextDay);
+			int dayofweek = c.get(Calendar.DAY_OF_WEEK);
     		do {
-    			c.setTime(nextDay);
     			c.add(Calendar.DATE, 1);
+        		dayofweek = c.get(Calendar.DAY_OF_WEEK);
     			rtn = DATE_FORMAT.format(c.getTime());
     		} while (dayofweek == Calendar.SATURDAY || dayofweek == Calendar.SUNDAY 
     				|| closeDays.contains(rtn));

@@ -7,9 +7,9 @@ import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 public class BaseDataCreator {
 	
 	public static void main(String[] args) {
-		List<String[]> targetCompanyIds = DailyStockDao.getTargetCompanies(2000);
+		List<String[]> targetCompanyIds = DailyStockDao.getTargetCompanies(50);
 		String startDate = "20120101";
-		String targetStockId = "A000020";
+		String targetStockId = null; //"A000020";
 		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));
 		if (targetStockId != null) {
 			DbToCsvConverter.makeCsv(targetStockId, startDate, FileUtil.getBaseDataCsvFilePath(startDate, targetStockId));
