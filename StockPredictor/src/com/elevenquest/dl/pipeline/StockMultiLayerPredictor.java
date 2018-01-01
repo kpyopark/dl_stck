@@ -144,7 +144,7 @@ public class StockMultiLayerPredictor {
     static final float[] thresholds = { 0.042f , -0.02f };
     static final int outputNum = thresholds.length + 1;
     static final List<String> outputLabel = Arrays.asList(new String[]{"Sell","N/A","Buy"}); 
-    final int iterations = 2000;
+    final int iterations = 4000;
     final int batchSize = 1201;
     long seed = 6;
     
