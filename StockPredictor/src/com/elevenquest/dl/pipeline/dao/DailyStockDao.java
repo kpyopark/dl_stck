@@ -778,7 +778,19 @@ public class DailyStockDao extends BaseDao {
 			", predict_stock_id, learn_count, score, total_count, accuracy, precisions, recall " +
 			", result00, result01, result02, result10, result11, result12, result20, result21, result22 " +
 			"from tb_predict_matrix where base_standard_date = ? and learning_stock_id = ?  and predict_target_date = ? and predict_stock_id = ? order by learn_count desc limit 1";
-	
+
+	final static String SELECT_LAST_PREDICT_METRIC_UNIQ = "with tb_last_predict as ( " +
+			"select a.*, " +
+			"  rank() over (partition by base_standard_date, learning_stock_id, " +
+			"predict_target_date, predict_stock_id order by learn_count desc) as learn_rank " +
+			"  from tb_predict_matrix a " +
+			") " +
+			"select * " +
+			"  from tb_last_predict " +
+			" where learn_rank = 1 " +
+			"  and learning_stock_id = predict_stock_id " +
+			"  and learning_stock_id = ? ";
+
 	public static void insertPredictMetric(PredictMetric metric) throws SQLException {
 		Connection con = null;
 		try {
@@ -822,6 +834,29 @@ public class DailyStockDao extends BaseDao {
 		insertPredictMetric(metric);
 	}
 	
+	private static PredictMetric getPredictMetricFromRs(ResultSet rs) throws SQLException {
+		PredictMetric oldOne = null;
+		if(rs.next()) {
+			oldOne = new PredictMetric();
+			oldOne.setLearnCount(rs.getInt("learn_count"));
+			oldOne.setTotalCount(rs.getInt("total_count"));
+			oldOne.setAccuracy(rs.getFloat("accuracy"));
+			oldOne.setPrecisions(rs.getFloat("precisions"));
+			oldOne.setRecall(rs.getFloat("recall"));
+			oldOne.setScore(rs.getFloat("score"));
+			oldOne.setResult00(rs.getInt("result00"));
+			oldOne.setResult01(rs.getInt("result01"));
+			oldOne.setResult02(rs.getInt("result02"));
+			oldOne.setResult10(rs.getInt("result10"));
+			oldOne.setResult11(rs.getInt("result11"));
+			oldOne.setResult12(rs.getInt("result12"));
+			oldOne.setResult20(rs.getInt("result20"));
+			oldOne.setResult21(rs.getInt("result21"));
+			oldOne.setResult22(rs.getInt("result22"));
+		}
+		return oldOne;
+	}
+	
 	public static PredictMetric getLastPredictMetric(PredictMetric metric) throws SQLException {
 		Connection con = null;
 		PredictMetric oldOne = null;
@@ -830,27 +865,25 @@ public class DailyStockDao extends BaseDao {
 			PreparedStatement stmt = con.prepareStatement(SELECT_LAST_PREDICT_METRIC);
 			stmt.setString(1, metric.getBaseStandardDate());
 			stmt.setString(2, metric.getLearningStockId());
-			stmt.setString(3,  metric.getPredictTargetDate());
-			stmt.setString(4,  metric.getPredictStockId());
+			stmt.setString(3, metric.getPredictTargetDate());
+			stmt.setString(4, metric.getPredictStockId());
 			ResultSet rs = stmt.executeQuery();
-			if(rs.next()) {
-				oldOne = new PredictMetric();
-				oldOne.setLearnCount(rs.getInt("learn_count"));
-				oldOne.setTotalCount(rs.getInt("total_count"));
-				oldOne.setAccuracy(rs.getFloat("accuracy"));
-				oldOne.setPrecisions(rs.getFloat("precisions"));
-				oldOne.setRecall(rs.getFloat("recall"));
-				oldOne.setScore(rs.getFloat("score"));
-				oldOne.setResult00(rs.getInt("result00"));
-				oldOne.setResult01(rs.getInt("result01"));
-				oldOne.setResult02(rs.getInt("result02"));
-				oldOne.setResult10(rs.getInt("result10"));
-				oldOne.setResult11(rs.getInt("result11"));
-				oldOne.setResult12(rs.getInt("result12"));
-				oldOne.setResult20(rs.getInt("result20"));
-				oldOne.setResult21(rs.getInt("result21"));
-				oldOne.setResult22(rs.getInt("result22"));
-			}
+			oldOne = getPredictMetricFromRs(rs);
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}
+		return oldOne;
+	}
+	
+	public static PredictMetric getLastPredictMetric(String stockId) throws SQLException {
+		Connection con = null;
+		PredictMetric oldOne = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(SELECT_LAST_PREDICT_METRIC_UNIQ);
+			stmt.setString(1, stockId);
+			ResultSet rs = stmt.executeQuery();
+			oldOne = getPredictMetricFromRs(rs);
 		} finally {
 			if(con != null) try { con.close(); } catch (Exception e) {}
 		}
@@ -896,5 +929,5 @@ public class DailyStockDao extends BaseDao {
 		}
 		return rtn;
 	}
-	
+
 }
