@@ -33,54 +33,28 @@ public class SpecificStockML {
 		//"A000480"
 	};
 	
-	public static void main(String[] args) throws IOException {
-		// checkModelExistAndTopCompanies();
-		// regressionMatrix();
-		// trainMultipleStocks();
-		String[] targets = {
-//				"A161390",
-//				"A139480",
-//				"A096770",
-//				"A066570",
-//				"A128940",
-//				"A086790",
-//				"A055550",
-//				"A033780",
-//				"A003550",
-//				"A069500",
-//				"A005490",
-//				"A000660",
-//				"A035250",
-//				"A012330",
-//				"A000270",
-//				"A005930",
-//				"A004020",
-//				"A036570",
-				// "A010130",	-- Out of Memory
-				"A105560",
-				"A010950",
-				"A017670",
-				"A018260",
-				"A021240",
-				"A051900",
-				"A034730",
-				"A051910",
-				"A024110",
-				"A011170",
-				"A034220",
-				"A006400",
-				"A000810",
-				"A005935",
-				"A009150",
-				"A005380",
-				"A015760"
-		};
+	private static void retrainValidModels() throws IOException, SQLException {
+		List<String[]> targetNameIds = DailyStockDao.getTargetCompanies(20);
+		List<String> targets = new ArrayList<String>();
+		for(String[] idAndName : targetNameIds) targets.add(idAndName[0]);
 		int count = 0;
 		for(String targetStockId : targets) {
 			count++;
-			log.info("################### [" + count + "/" + targets.length + "] - " + targetStockId + " #################");
+			log.info("################### [" + count + "/" + targets.size() + "] - " + targetStockId + " #################");
 			trainSpecificStocks(targetStockId);
 		}
+	}
+	
+	private static void trainSpecificStockWithMultipleDataSets(String[] args) throws IOException, SQLException {
+		
+	}
+	
+	public static void main(String[] args) throws IOException, SQLException {
+		// checkModelExistAndTopCompanies();
+		// regressionMatrix();
+		// trainMultipleStocks();
+		// retrainValidModels();
+		trainSpecificStocks(args[1]);
 	}
 	
 	public static void regressionMatrix() throws IOException {
@@ -103,7 +77,7 @@ public class SpecificStockML {
 	public static void trainSpecificStocks(String stockId) throws IOException {
 		MetricCreator creator = new MetricCreator();
 		String modelPath = FileUtil.getStockModelPath(FileUtil.ML_BASE_DATE, stockId);
-		trainWithCorrelatedAndUncorrelatedStocks(creator, stockId, modelPath);
+		trainWithCorrelatedAndUncorrelatedStocks(creator, stockId, modelPath, true);
 	}
 	
 	public static void trainMultipleStocks() throws IOException {
@@ -113,7 +87,7 @@ public class SpecificStockML {
 		for(int count = 0; count < targetStocks.size(); count++) {
 			String stockId = targetStocks.get(count);
 			String modelPath = FileUtil.getStockModelPath(FileUtil.ML_BASE_DATE, stockId);
-			PredictMetric lastMetric = trainWithCorrelatedAndUncorrelatedStocks(creator, stockId, modelPath);
+			PredictMetric lastMetric = trainWithCorrelatedAndUncorrelatedStocks(creator, stockId, modelPath, false);
 			/*
 			if(lastMetric != null && lastMetric.getAccuracy() > 0.75f) {
 				creator.calculateOneMatrix(modelPath, validSources);
@@ -161,32 +135,19 @@ public class SpecificStockML {
 			// For 1 times, Training with original ones.
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 		} else {
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), needRenew);
-			/*
 			// For 4 times, Training with correlated ones.
 			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			// For 1 times, Training with correlated ones.
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			*/
-			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
-			//lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 			//lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 		}
 		return lastMetric;
 	}
 	
-	private static PredictMetric trainWithCorrelatedAndUncorrelatedStocks(MetricCreator creator, String stockId, String modelPath) {
+	private static PredictMetric trainWithCorrelatedAndUncorrelatedStocks(MetricCreator creator, String stockId, String modelPath, boolean needSkip) {
 		PredictMetric lastMetric = null;
 		try {
 			List<String> mostCorrelateds = DailyStockDao.getTopNCorrelatedStocks(stockId, true);
@@ -195,7 +156,7 @@ public class SpecificStockML {
 			log.debug("Learning target is " + String.join(",", mostUncorrelateds));
 			float accuracy = DailyStockDao.getLastPredictMetric(stockId).getAccuracy();
 			log.debug("Accuracy is " + accuracy);
-			if(accuracy > SKIP_THRESHOLD)
+			if(accuracy > SKIP_THRESHOLD && !needSkip)
 				return lastMetric;
 			boolean needModelRenew = accuracy < RENEWAL_THRESHOLD;
 			lastMetric = trainWithOtherStocks(creator, stockId, modelPath, mostCorrelateds, mostUncorrelateds, needModelRenew, 3);

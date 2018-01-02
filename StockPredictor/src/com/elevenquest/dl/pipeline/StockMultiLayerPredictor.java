@@ -202,6 +202,8 @@ public class StockMultiLayerPredictor {
         	if(minNumExample > labelDataSet.numExamples())
         		minNumExample = labelDataSet.numExamples();
         }
+        if(minNumExample == Integer.MAX_VALUE)
+        	minNumExample = 1;
         List<DataSet> tempMergeList = new ArrayList<DataSet>();
         for(int inx = 0 ; inx < outputNum; inx++) {
         	tempMergeList.add(labelDataSets.get(inx).sample(minNumExample));
@@ -313,6 +315,15 @@ public class StockMultiLayerPredictor {
         log.info("Total Precited Value List:" + predicted);
         log.info("Tommorow Predicted Value:" + predicted.get(predicted.size()-1));
         return eval;
+    }
+    
+    public List<String> getPredictionResult() {
+    	DataSet copySet = allData.copy();
+        DataNormalization normalizer = new NormalizerStandardize();
+        normalizer.fit(copySet);
+        normalizer.transform(copySet);
+        List<String> predicted = model.predict(copySet);
+        return predicted;
     }
     
 }

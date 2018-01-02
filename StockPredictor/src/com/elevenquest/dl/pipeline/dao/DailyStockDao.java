@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.elevenquest.dl.pipeline.post.PredictMetric;
+import com.elevenquest.dl.pipeline.post.StockPrediction;
 
 public class DailyStockDao extends BaseDao {
 	private static Logger log = LoggerFactory.getLogger(DailyStockDao.class);
@@ -625,6 +626,7 @@ public class DailyStockDao extends BaseDao {
 	public static List<String[]> getTargetCompanies(int limit) {
 		ArrayList<String[]> list = new ArrayList<String[]>();
 		// MC top 500 && Stock Price < 20,000
+		/*
 		String query = "with tb_lastday as ( "+
 			"select max(standard_date) last_date "+
 			"  from tb_company_stock_daily "+
@@ -636,6 +638,28 @@ public class DailyStockDao extends BaseDao {
 			// "   and stock_price < 20000 " +
 			" order by market_capital desc " +
 			" limit " + limit;
+		*/
+		String query = "with tb_last_predict as ( " +
+				"select a.*, " +
+				"  rank() over (partition by base_standard_date, learning_stock_id, " +
+				"predict_target_date, predict_stock_id order by learn_count desc) as learn_rank " +
+				"  from tb_predict_matrix a " +
+				") " +
+				", tb_last_daily_stock as ( " +
+				"  select * " +
+				"    from tb_company_stock_daily " +
+				"   where standard_date = (select max(standard_date) from " +
+				"tb_company_stock_daily where stock_id = 'A008560') " +
+				") " +
+				"select b.stock_id, b.company_name, null::double precision start_price, b.today_low low_price, b.today_high high_price, b.stock_price end_price " +
+				"  from tb_last_predict a left outer join tb_last_daily_stock b on " +
+				"(a.learning_stock_id = b.stock_id) " +
+				" where learn_rank = 1 " +
+				"   and accuracy > 0.75 " +
+				"   and total_count > 200 " +
+				"   and learning_stock_id = predict_stock_id " +
+				" order by accuracy desc  " +
+				"  limit 12 ";
 		Connection con = null;
 		ResultSet rs = null;
 		try {
@@ -644,7 +668,11 @@ public class DailyStockDao extends BaseDao {
 			while(rs.next())
 				list.add(new String[] {
 						rs.getString("stock_id"),
-						rs.getString("company_name")
+						rs.getString("company_name"),
+						rs.getString("start_price"),
+						rs.getString("low_price"),
+						rs.getString("high_price"),
+						rs.getString("end_price")
 				});
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -929,5 +957,36 @@ public class DailyStockDao extends BaseDao {
 		}
 		return rtn;
 	}
-
+	
+	final static String INSERT_PREDICT_STOCK = "insert into tb_predict_stock (predict_standard_date, stock_id, model_standard_date," +
+			"model_learning_stock_id, model_target_date, model_predict_stock_id, model_learn_count, " +
+			"start_price, low_price, high_price, end_price, predict_result, accuracy, precisions, recall, is_predict) values " +
+			"(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+	
+	public static void insertPredictStock(StockPrediction predict) throws SQLException {
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(INSERT_PREDICT_STOCK);
+			stmt.setString(1, predict.getPredictStandardDate());
+			stmt.setString(2, predict.getStockId());
+			stmt.setString(3,  predict.getModelStandardDate());
+			stmt.setString(4,  predict.getModelLearningStockId());
+			stmt.setString(5,  predict.getModelTargetDate());
+			stmt.setString(6,  predict.getModelPredictStockId());
+			stmt.setInt(7,  predict.getModelLearnCount());
+			stmt.setFloat(8,  predict.getStartPrice());
+			stmt.setFloat(9,  predict.getLowPrice());
+			stmt.setFloat(10,  predict.getHighPrice());
+			stmt.setFloat(11,  predict.getEndPrice());
+			stmt.setInt(12,  predict.getPredictResult());
+			stmt.setFloat(13,  predict.getAccuracy());
+			stmt.setFloat(14,  predict.getPrecisions());
+			stmt.setFloat(15,  predict.getRecall());
+			stmt.setBoolean(16,  predict.isPredict());
+			stmt.executeUpdate();
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}		
+	}
 }
