@@ -140,6 +140,23 @@ public class StockMultiLayerPredictor {
     	return predict();
     }
     
+    public static int getResultintFromRoi(float roi) {
+    	int count = 0;
+    	for(float baseRoi:thresholds) {
+    		count += roi > baseRoi ? 1 : 0;
+    	}
+    	return count;
+    }
+    
+    public static int getResultFromString(String result) {
+    	return "Sell".equals(result) ? 0 :
+			"N/A".equals(result) ? 1 : 2;
+    }
+    
+    public static String getLabelStringFromResultInt(int result) {
+    	return outputLabel.get(result);
+    }
+    
     static final int numInputs = 387;
     static final float[] thresholds = { 0.042f , -0.02f };
     static final int outputNum = thresholds.length + 1;

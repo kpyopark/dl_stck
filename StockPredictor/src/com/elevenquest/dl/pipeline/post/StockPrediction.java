@@ -8,15 +8,54 @@ public class StockPrediction {
 	String modelTargetDate;
 	String modelPredictStockId;
 	int modelLearnCount;
-	float startPrice;
-	float lowPrice;
-	float highPrice;
-	float endPrice;
-	int predictResult;
+	Double startPrice;
+	Double lowPrice;
+	Double highPrice;
+	Double endPrice;
+	double prevStartPrice;
+	double prevLowPrice;
+	double prevHighPrice;
+	double prevEndPrice;
+
+	Integer predictResult;
 	float accuracy;
 	float precisions;
 	float recall;
 	boolean predicted;
+
+	Integer result;
+	
+	public double getPrevStartPrice() {
+		return prevStartPrice;
+	}
+
+	public void setPrevStartPrice(double prevStartPrice) {
+		this.prevStartPrice = prevStartPrice;
+	}
+
+	public double getPrevLowPrice() {
+		return prevLowPrice;
+	}
+
+	public void setPrevLowPrice(double prevLowPrice) {
+		this.prevLowPrice = prevLowPrice;
+	}
+
+	public double getPrevHighPrice() {
+		return prevHighPrice;
+	}
+
+	public void setPrevHighPrice(double prevHighPrice) {
+		this.prevHighPrice = prevHighPrice;
+	}
+
+	public double getPrevEndPrice() {
+		return prevEndPrice;
+	}
+
+	public void setPrevEndPrice(double prevEndPrice) {
+		this.prevEndPrice = prevEndPrice;
+	}
 
 	public String getPredictStandardDate() {
 		return predictStandardDate;
@@ -74,43 +113,43 @@ public class StockPrediction {
 		this.modelLearnCount = modelLearnCount;
 	}
 
-	public float getStartPrice() {
+	public Double getStartPrice() {
 		return startPrice;
 	}
 
-	public void setStartPrice(float startPrice) {
+	public void setStartPrice(Double startPrice) {
 		this.startPrice = startPrice;
 	}
 
-	public float getLowPrice() {
+	public Double getLowPrice() {
 		return lowPrice;
 	}
 
-	public void setLowPrice(float lowPrice) {
+	public void setLowPrice(Double lowPrice) {
 		this.lowPrice = lowPrice;
 	}
 
-	public float getHighPrice() {
+	public Double getHighPrice() {
 		return highPrice;
 	}
 
-	public void setHighPrice(float highPrice) {
+	public void setHighPrice(Double highPrice) {
 		this.highPrice = highPrice;
 	}
 
-	public float getEndPrice() {
+	public Double getEndPrice() {
 		return endPrice;
 	}
 
-	public void setEndPrice(float endPrice) {
+	public void setEndPrice(Double endPrice) {
 		this.endPrice = endPrice;
 	}
 
-	public int getPredictResult() {
+	public Integer getPredictResult() {
 		return predictResult;
 	}
 
-	public void setPredictResult(int predictResult) {
+	public void setPredictResult(Integer predictResult) {
 		this.predictResult = predictResult;
 	}
 
@@ -144,5 +183,13 @@ public class StockPrediction {
 
 	public void setPredict(boolean isPredict) {
 		this.predicted = isPredict;
+	}
+
+	public Integer getResult() {
+		return result;
+	}
+
+	public void setResult(Integer result) {
+		this.result = result;
 	}
 }

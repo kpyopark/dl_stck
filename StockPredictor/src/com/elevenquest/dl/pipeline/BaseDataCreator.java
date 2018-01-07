@@ -7,7 +7,7 @@ import com.elevenquest.dl.pipeline.dao.DailyStockDao;
 public class BaseDataCreator {
 	
 	public static void main(String[] args) {
-		List<String[]> targetCompanyIds = DailyStockDao.getTargetCompanies(50);
+		List<String[]> targetCompanyIds = DailyStockDao.getLearningTargetCompanies(200);
 		String startDate = "20120101";
 		String targetStockId = null; //"A000020";
 		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));

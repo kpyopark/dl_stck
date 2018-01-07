@@ -16,7 +16,7 @@ public class DailyStockDao extends BaseDao {
 	private static Logger log = LoggerFactory.getLogger(DailyStockDao.class);
 
 	public static String getDailyStockLearningDataQuery(String stockId, String startDate) {
-		return "with tb_tx_date as ( \n" + 
+		return  "with tb_tx_date as ( \n" + 
 				"    select distinct standard_date \n" + 
 				"      from tb_company_stock_daily \n" + 
 				"     where stock_id = 'A005930' and standard_date >= '"+ startDate + "' \n" + 
@@ -42,7 +42,7 @@ public class DailyStockDao extends BaseDao {
 				"           '" + stockId + "'::text as stock_id, \n" + 
 				"           standard_date as target_date, \n" + 
 				"           to_date(standard_date,'YYYYMMDD') as target_datetype, \n" + 
-				"           to_char(to_date(standard_date, 'YYYYMMDD') - '1 year'::interval, 'YYYYMMDD') as start_date \n" + 
+				"           to_char(to_date(standard_date, 'YYYYMMDD') - '1 year 1 month'::interval, 'YYYYMMDD') as start_date \n" + 
 				"      from tb_tx_date_with_predict \n" + 
 				") \n" + 
 				", tb_std_date as ( \n" + 
@@ -622,6 +622,44 @@ public class DailyStockDao extends BaseDao {
 				"  from tb_result   ";
  
 	}
+	
+	public static List<String[]> getLearningTargetCompanies(int limit) {
+		ArrayList<String[]> list = new ArrayList<String[]>();
+		String query = "with tb_lastday as ( "+
+			"select max(standard_date) last_date "+
+			"  from tb_company_stock_daily "+
+			" where stock_id = 'A005960' "+
+			") " +
+			"select * " +
+			"  from tb_company_stock_daily, tb_lastday " +
+			" where standard_date = last_date " +
+			// "   and stock_price < 20000 " +
+			" order by market_capital desc " +
+			" limit " + limit;
+		
+		Connection con = null;
+		ResultSet rs = null;
+		try {
+			con = getConnection();
+			rs = con.createStatement().executeQuery(query);
+			while(rs.next())
+				list.add(new String[] {
+						rs.getString("stock_id"),
+						rs.getString("company_name"),
+						rs.getString("open_price"),
+						rs.getString("today_low"),
+						rs.getString("today_high"),
+						rs.getString("stock_price")
+				});
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if(con!= null) try {con.close(); }catch(Exception e) {}
+		}
+		return list;
+	}
+	
+
 
 	public static List<String[]> getTargetCompanies(int limit) {
 		ArrayList<String[]> list = new ArrayList<String[]>();
@@ -659,7 +697,8 @@ public class DailyStockDao extends BaseDao {
 				"   and total_count > 200 " +
 				"   and learning_stock_id = predict_stock_id " +
 				" order by accuracy desc  " +
-				"  limit 12 ";
+				"  limit " + limit;
+		
 		Connection con = null;
 		ResultSet rs = null;
 		try {
@@ -866,6 +905,10 @@ public class DailyStockDao extends BaseDao {
 		PredictMetric oldOne = null;
 		if(rs.next()) {
 			oldOne = new PredictMetric();
+			oldOne.setBaseStandardDate(rs.getString("base_standard_date"));
+			oldOne.setLearningStockId(rs.getString("learning_stock_id"));
+			oldOne.setPredictTargetDate(rs.getString("predict_target_date"));
+			oldOne.setPredictStockId(rs.getString("predict_stock_id"));
 			oldOne.setLearnCount(rs.getInt("learn_count"));
 			oldOne.setTotalCount(rs.getInt("total_count"));
 			oldOne.setAccuracy(rs.getFloat("accuracy"));
@@ -959,9 +1002,10 @@ public class DailyStockDao extends BaseDao {
 	}
 	
 	final static String INSERT_PREDICT_STOCK = "insert into tb_predict_stock (predict_standard_date, stock_id, model_standard_date," +
-			"model_learning_stock_id, model_target_date, model_predict_stock_id, model_learn_count, " +
-			"start_price, low_price, high_price, end_price, predict_result, accuracy, precisions, recall, is_predict) values " +
-			"(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+				"model_learning_stock_id, model_target_date, model_predict_stock_id, model_learn_count, " +
+				"start_price, low_price, high_price, end_price, predict_result, accuracy, precisions, recall, is_predict, " +
+				"prev_start_price, prev_low_price, prev_high_price, prev_end_price, result) values " +
+				"(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 	
 	public static void insertPredictStock(StockPrediction predict) throws SQLException {
 		Connection con = null;
@@ -975,18 +1019,153 @@ public class DailyStockDao extends BaseDao {
 			stmt.setString(5,  predict.getModelTargetDate());
 			stmt.setString(6,  predict.getModelPredictStockId());
 			stmt.setInt(7,  predict.getModelLearnCount());
-			stmt.setFloat(8,  predict.getStartPrice());
-			stmt.setFloat(9,  predict.getLowPrice());
-			stmt.setFloat(10,  predict.getHighPrice());
-			stmt.setFloat(11,  predict.getEndPrice());
-			stmt.setInt(12,  predict.getPredictResult());
+			stmt.setObject(8,  predict.getStartPrice(), java.sql.Types.FLOAT);
+			stmt.setObject(9,  predict.getLowPrice(), java.sql.Types.FLOAT);
+			stmt.setObject(10,  predict.getHighPrice(), java.sql.Types.FLOAT);
+			stmt.setObject(11,  predict.getEndPrice(), java.sql.Types.FLOAT);
+			stmt.setObject(12,  predict.getPredictResult(), java.sql.Types.INTEGER);
 			stmt.setFloat(13,  predict.getAccuracy());
 			stmt.setFloat(14,  predict.getPrecisions());
 			stmt.setFloat(15,  predict.getRecall());
 			stmt.setBoolean(16,  predict.isPredict());
+			stmt.setDouble(17, predict.getPrevStartPrice());
+			stmt.setDouble(18,  predict.getPrevLowPrice());
+			stmt.setDouble(19, predict.getPrevHighPrice());
+			stmt.setDouble(20, predict.getPrevEndPrice());
+			stmt.setObject(21, predict.getResult(), java.sql.Types.INTEGER);
 			stmt.executeUpdate();
 		} finally {
 			if(con != null) try { con.close(); } catch (Exception e) {}
 		}		
 	}
+	
+	final static String UPDATE_PREDICT_STOCK = "update tb_predict_stock set " +
+			"start_price = ?, low_price = ?, high_price = ?, end_price = ?, result = ? " +
+			"where predict_standard_date = ? and stock_id = ?";
+	
+	public static void updateStockPredict(StockPrediction prediction) throws SQLException {
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(UPDATE_PREDICT_STOCK);
+			stmt.setDouble(1, prediction.getStartPrice());
+			stmt.setDouble(2, prediction.getLowPrice());
+			stmt.setDouble(3, prediction.getHighPrice());
+			stmt.setDouble(4, prediction.getEndPrice());
+			stmt.setInt(5, prediction.getResult());
+			stmt.setString(6,  prediction.getPredictStandardDate());
+			stmt.setString(7,  prediction.getStockId());
+			stmt.executeUpdate();
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}				
+	}
+	
+	
+	public static float getRoi(String stockId, String standardDate) throws SQLException {
+		String query = "with user_settings as ( " +
+				"  select '"+ stockId + "'::text as stock_id, " +
+				"         '"+ standardDate + "'::text as standard_date " +
+				") " +
+				", tb_settings as ( " +
+				"  select b.stock_id,  " +
+				"         b.standard_date,  " +
+				"         max(a.standard_date) prev_standard_date " +
+				"    from tb_company_stock_daily a  " +
+				"         join user_settings b on (a.stock_id = b.stock_id and a.standard_date " +
+				"< b.standard_date) " +
+				"   group by b.stock_id, b.standard_date " +
+				") " +
+				", tb_today_stock as ( " +
+				"  select * " +
+				"    from tb_company_stock_daily a  " +
+				"         join tb_settings b on (a.standard_date = b.standard_date and " +
+				"a.stock_id = b.stock_id) " +
+				") " +
+				", tb_prev_stock as ( " +
+				"  select * " +
+				"    from tb_company_stock_daily a  " +
+				"         join tb_settings b on (a.standard_date = b.prev_standard_date and " +
+				"a.stock_id = b.stock_id) " +
+				") " +
+				"select log(a.stock_price::float / b.stock_price), a.stock_price, b.stock_price " +
+				"  from tb_today_stock a, tb_prev_stock b ";
+		float rtn = 0.0f;
+		ResultSet rs = null;
+		Connection con = null;
+		try {
+			con = getConnection();
+			rs = con.createStatement().executeQuery(query);
+			if(rs.next()) {
+				rtn = rs.getFloat(1);
+			}
+		} finally {
+			if(con != null) try {con.close(); } catch (SQLException sqle) { sqle.printStackTrace(); }
+		}
+		return rtn;
+	}
+	
+	public static StockPrediction getCurrentStocInfo(String standardDate, String stockId) throws SQLException {
+		String query = "select * from tb_company_stock_daily where standard_date = '" + standardDate + "' and stock_id = '" + stockId + "'";
+		StockPrediction prediction = new StockPrediction();
+		Connection con = null;
+		ResultSet rs = null;
+		try {
+			con = getConnection();
+			rs = con.createStatement().executeQuery(query);
+			if(rs.next()) {
+				prediction.setPrevEndPrice(rs.getInt("stock_price"));
+				prediction.setPrevHighPrice(rs.getInt("today_high"));
+				prediction.setPrevLowPrice(rs.getInt("today_low"));
+				prediction.setPrevStartPrice(rs.getInt("open_price"));
+			}
+		} finally {
+			if (rs != null) try { rs.close();} catch(Exception e) {}
+			if (con != null) try { con.close();} catch(Exception e) {}
+		}
+		return prediction;
+	}
+	
+	public static List<StockPrediction> getStockPredictionWithNoResult(String predictTargetDate, String stockId) throws SQLException {
+		String query = "select * from tb_predict_stock where stock_id = '" + stockId + "' and predict_standard_date = '" + predictTargetDate + "'";
+		List<StockPrediction> rtn = new ArrayList<StockPrediction>();
+		Connection con = null;
+		ResultSet rs = null;
+		StockPrediction prediction = null;
+		try {
+			con = getConnection();
+			rs = con.createStatement().executeQuery(query);
+			while(rs.next()) {
+				prediction = new StockPrediction();
+				prediction.setPredictStandardDate(rs.getString("predict_standard_date"));
+				prediction.setStockId(rs.getString("stock_id"));
+				prediction.setModelStandardDate(rs.getString("model_standard_date"));
+				prediction.setModelLearningStockId(rs.getString("model_learning_stock_id"));
+				prediction.setModelTargetDate(rs.getString("model_target_date"));
+				prediction.setModelPredictStockId(rs.getString("model_predict_stock_id"));
+				prediction.setModelLearnCount(rs.getInt("model_learn_count"));
+				prediction.setStartPrice((Double)rs.getObject("start_price"));
+				prediction.setLowPrice((Double)rs.getObject("low_price"));
+				prediction.setHighPrice((Double)rs.getObject("high_price"));
+				prediction.setEndPrice((Double)rs.getObject("end_price"));
+				prediction.setPredictResult((Integer)rs.getObject("predict_result"));
+				prediction.setAccuracy(rs.getFloat("accuracy"));
+				prediction.setPrecisions(rs.getFloat("precisions"));
+				prediction.setRecall(rs.getFloat("recall"));
+				prediction.setPredict(rs.getBoolean("is_predict"));
+				prediction.setPrevStartPrice(rs.getInt("prev_start_price"));
+				prediction.setPrevLowPrice(rs.getInt("prev_low_price"));
+				prediction.setPrevHighPrice(rs.getInt("prev_high_price"));
+				prediction.setPrevEndPrice(rs.getInt("prev_end_price"));
+				prediction.setResult((Integer)rs.getObject("result"));
+				rtn.add(prediction);
+			}
+		} finally {
+			if (rs != null) try { rs.close();} catch(Exception e) {}
+			if (con != null) try { con.close();} catch(Exception e) {}
+		}
+		return rtn;
+	}
+	
+	
 }
