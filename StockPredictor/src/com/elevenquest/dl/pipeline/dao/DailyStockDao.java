@@ -858,6 +858,13 @@ public class DailyStockDao extends BaseDao {
 			"  and learning_stock_id = predict_stock_id " +
 			"  and learning_stock_id = ? ";
 
+	final static String SELECT_RELATED_PREDICT_METRIC = 
+			"select * " +
+			"  from tb_predict_matrix " +
+			" where learning_stock_id <> predict_stock_id " +
+			"  and learning_stock_id = ? " +
+			"  order by accuracy ";
+
 	public static void insertPredictMetric(PredictMetric metric) throws SQLException {
 		Connection con = null;
 		try {
@@ -903,28 +910,26 @@ public class DailyStockDao extends BaseDao {
 	
 	private static PredictMetric getPredictMetricFromRs(ResultSet rs) throws SQLException {
 		PredictMetric oldOne = null;
-		if(rs.next()) {
-			oldOne = new PredictMetric();
-			oldOne.setBaseStandardDate(rs.getString("base_standard_date"));
-			oldOne.setLearningStockId(rs.getString("learning_stock_id"));
-			oldOne.setPredictTargetDate(rs.getString("predict_target_date"));
-			oldOne.setPredictStockId(rs.getString("predict_stock_id"));
-			oldOne.setLearnCount(rs.getInt("learn_count"));
-			oldOne.setTotalCount(rs.getInt("total_count"));
-			oldOne.setAccuracy(rs.getFloat("accuracy"));
-			oldOne.setPrecisions(rs.getFloat("precisions"));
-			oldOne.setRecall(rs.getFloat("recall"));
-			oldOne.setScore(rs.getFloat("score"));
-			oldOne.setResult00(rs.getInt("result00"));
-			oldOne.setResult01(rs.getInt("result01"));
-			oldOne.setResult02(rs.getInt("result02"));
-			oldOne.setResult10(rs.getInt("result10"));
-			oldOne.setResult11(rs.getInt("result11"));
-			oldOne.setResult12(rs.getInt("result12"));
-			oldOne.setResult20(rs.getInt("result20"));
-			oldOne.setResult21(rs.getInt("result21"));
-			oldOne.setResult22(rs.getInt("result22"));
-		}
+		oldOne = new PredictMetric();
+		oldOne.setBaseStandardDate(rs.getString("base_standard_date"));
+		oldOne.setLearningStockId(rs.getString("learning_stock_id"));
+		oldOne.setPredictTargetDate(rs.getString("predict_target_date"));
+		oldOne.setPredictStockId(rs.getString("predict_stock_id"));
+		oldOne.setLearnCount(rs.getInt("learn_count"));
+		oldOne.setTotalCount(rs.getInt("total_count"));
+		oldOne.setAccuracy(rs.getFloat("accuracy"));
+		oldOne.setPrecisions(rs.getFloat("precisions"));
+		oldOne.setRecall(rs.getFloat("recall"));
+		oldOne.setScore(rs.getFloat("score"));
+		oldOne.setResult00(rs.getInt("result00"));
+		oldOne.setResult01(rs.getInt("result01"));
+		oldOne.setResult02(rs.getInt("result02"));
+		oldOne.setResult10(rs.getInt("result10"));
+		oldOne.setResult11(rs.getInt("result11"));
+		oldOne.setResult12(rs.getInt("result12"));
+		oldOne.setResult20(rs.getInt("result20"));
+		oldOne.setResult21(rs.getInt("result21"));
+		oldOne.setResult22(rs.getInt("result22"));
 		return oldOne;
 	}
 	
@@ -939,7 +944,8 @@ public class DailyStockDao extends BaseDao {
 			stmt.setString(3, metric.getPredictTargetDate());
 			stmt.setString(4, metric.getPredictStockId());
 			ResultSet rs = stmt.executeQuery();
-			oldOne = getPredictMetricFromRs(rs);
+			if(rs.next())
+				oldOne = getPredictMetricFromRs(rs);
 		} finally {
 			if(con != null) try { con.close(); } catch (Exception e) {}
 		}
@@ -954,11 +960,31 @@ public class DailyStockDao extends BaseDao {
 			PreparedStatement stmt = con.prepareStatement(SELECT_LAST_PREDICT_METRIC_UNIQ);
 			stmt.setString(1, stockId);
 			ResultSet rs = stmt.executeQuery();
-			oldOne = getPredictMetricFromRs(rs);
+			if(rs.next())
+				oldOne = getPredictMetricFromRs(rs);
 		} finally {
 			if(con != null) try { con.close(); } catch (Exception e) {}
 		}
 		return oldOne;
+	}
+	
+	public static List<PredictMetric> getRelatedPredictMatric(String stockId, boolean related) throws SQLException {
+		Connection con = null;
+		List<PredictMetric> rtn = new ArrayList<PredictMetric>();
+		try {
+			con = getConnection();
+			PreparedStatement stmt = con.prepareStatement(SELECT_RELATED_PREDICT_METRIC + (related ? "desc" : " ") + " limit 3");
+			stmt.setString(1, stockId);
+			PredictMetric oldOne = null;
+			ResultSet rs = stmt.executeQuery();
+			while(rs.next()) {
+				oldOne = getPredictMetricFromRs(rs);
+				rtn.add(oldOne);
+			}
+		} finally {
+			if(con != null) try { con.close(); } catch (Exception e) {}
+		}
+		return rtn;
 	}
 	
 	public static ResultSet getDailyStockLearningDataRs(String stockId, String startDate) throws SQLException {

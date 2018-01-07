@@ -3,7 +3,10 @@ package com.elevenquest.dl.pipeline;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +57,7 @@ public class SpecificStockML {
 		// regressionMatrix();
 		// trainMultipleStocks();
 		// retrainValidModels();
-		trainSpecificStocks(args[1]);
+		trainSpecificStocks(args[0]);
 	}
 	
 	public static void regressionMatrix() throws IOException {
@@ -150,8 +153,14 @@ public class SpecificStockML {
 	private static PredictMetric trainWithCorrelatedAndUncorrelatedStocks(MetricCreator creator, String stockId, String modelPath, boolean needSkip) {
 		PredictMetric lastMetric = null;
 		try {
-			List<String> mostCorrelateds = DailyStockDao.getTopNCorrelatedStocks(stockId, true);
-			List<String> mostUncorrelateds = DailyStockDao.getTopNCorrelatedStocks(stockId, false);
+			List<String> mostCorrelateds = DailyStockDao.getRelatedPredictMatric(stockId, true)
+					.stream()
+					.map(predict -> predict.getPredictStockId())
+					.collect(Collectors.toList());
+			List<String> mostUncorrelateds = DailyStockDao.getRelatedPredictMatric(stockId, false)
+					.stream()
+					.map(predict -> predict.getPredictStockId())
+					.collect(Collectors.toList());
 			log.debug("Learning target is " + String.join(",", mostCorrelateds));
 			log.debug("Learning target is " + String.join(",", mostUncorrelateds));
 			float accuracy = DailyStockDao.getLastPredictMetric(stockId).getAccuracy();
