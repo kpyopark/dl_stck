@@ -9,17 +9,24 @@ import com.elevenquest.dl.pipeline.post.PredictMetric;
 import com.elevenquest.dl.pipeline.post.StockPrediction;
 
 public class PredictChecker {
+
 	public static void main(String[] args) throws Exception {
-		List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
 		String lastDate = DailyStockDao.getLastDay();
-    	
+		if(args.length > 0) {
+			lastDate = args[0];
+		}
+		updateResult(lastDate);
+	}
+	
+	public static void updateResult(String standardDate) throws Exception {
+		List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
 		for(String[] stockIdAndName : targetCompanyIdAndNames) {
 			try {
 				String stockId = stockIdAndName[0];
-				float dailyRoi = DailyStockDao.getRoi(stockId, lastDate);
+				float dailyRoi = DailyStockDao.getRoi(stockId, standardDate);
 				int result = StockMultiLayerPredictor.getResultintFromRoi(dailyRoi);
-				List<StockPrediction> predictions = DailyStockDao.getStockPredictionWithNoResult(lastDate, stockId);
-				StockPrediction currentStockValue = DailyStockDao.getCurrentStocInfo(lastDate, stockId);
+				List<StockPrediction> predictions = DailyStockDao.getStockPredictionWithNoResult(standardDate, stockId);
+				StockPrediction currentStockValue = DailyStockDao.getCurrentStocInfo(standardDate, stockId);
 				for(StockPrediction prediction : predictions) {
 					prediction.setEndPrice(currentStockValue.getPrevEndPrice());
 					prediction.setHighPrice(currentStockValue.getPrevHighPrice());

@@ -64,14 +64,27 @@ public class DbToCsvConverter {
 	}
 	
 	public static void main(String[] args) {
-		List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
+		String stockId = null;
+		if(args.length > 0) {
+			stockId = args[0];
+		}
 		String startDate = "20160101";
 		String lastDate = DailyStockDao.getLastDay();
-		System.out.println(lastDate);
-		//System.out.println(FileUtil.getNextWorkday(lastDate, getClosedDay()));
-		for(String[] stockIdAndName : targetCompanyIdAndNames) {
-			makeCsv(stockIdAndName[0], startDate, 
-					FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(), stockIdAndName[0], startDate));
+		System.out.println("Last Day of Tx : " + lastDate);
+		//System.out.println("Predict Target Day : " + FileUtil.getNextWorkday(lastDate, getClosedDay()));
+		if(stockId != null) {
+			makeCsv(stockId, startDate, 
+					FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(), stockId, startDate));
+		} else {
+			List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
+			for(String[] stockIdAndName : targetCompanyIdAndNames) {
+				stockId = stockIdAndName[0];
+				System.out.println("target:" + stockId);
+				if(stockId.equals("A005380"))
+					continue;
+				makeCsv(stockIdAndName[0], startDate, 
+						FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(),stockId , startDate));
+			}
 		}
 	}
 	

@@ -1114,7 +1114,7 @@ public class DailyStockDao extends BaseDao {
 				"         join tb_settings b on (a.standard_date = b.prev_standard_date and " +
 				"a.stock_id = b.stock_id) " +
 				") " +
-				"select log(a.stock_price::float / b.stock_price), a.stock_price, b.stock_price " +
+				"select round(log(a.stock_price::float / b.stock_price)*1000)/100, a.stock_price, b.stock_price " +
 				"  from tb_today_stock a, tb_prev_stock b ";
 		float rtn = 0.0f;
 		ResultSet rs = null;
