@@ -80,8 +80,8 @@ public class DbToCsvConverter {
 			for(String[] stockIdAndName : targetCompanyIdAndNames) {
 				stockId = stockIdAndName[0];
 				System.out.println("target:" + stockId);
-				if(stockId.equals("A005380"))
-					continue;
+				// if(stockId.equals("A005380"))
+				//	continue;
 				makeCsv(stockIdAndName[0], startDate, 
 						FileUtil.getDailyPredictTargetFilePath(lastDate, DailyStockDao.getClosedDay(),stockId , startDate));
 			}

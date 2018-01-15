@@ -25,10 +25,10 @@ public class SpecificStockML {
 	
 	private static Logger log = LoggerFactory.getLogger(SpecificStockML.class);
 
-	private final static String TARGET_MODEL = "A002320";
+	private final static String TARGET_MODEL = "A008560";
 	
-	private final static float RENEWAL_THRESHOLD = 0.4f;
-	private final static float SKIP_THRESHOLD = 0.8f;
+	private final static float RENEWAL_THRESHOLD = 0.25f;
+	private final static float SKIP_THRESHOLD = 0.75f;
 	
 	private final static String[] LEARNING_DATA_LIST = {
 		TARGET_MODEL, 
@@ -37,9 +37,9 @@ public class SpecificStockML {
 	};
 	
 	private static void retrainValidModels() throws IOException, SQLException {
-		List<String[]> targetNameIds = DailyStockDao.getTargetCompanies(20);
+		List<String[]> targetCompanyIdAndNames = DailyStockDao.getTargetCompanies(50);
 		List<String> targets = new ArrayList<String>();
-		for(String[] idAndName : targetNameIds) targets.add(idAndName[0]);
+		for(String[] idAndName : targetCompanyIdAndNames) targets.add(idAndName[0]);
 		int count = 0;
 		for(String targetStockId : targets) {
 			count++;
@@ -56,8 +56,11 @@ public class SpecificStockML {
 		// checkModelExistAndTopCompanies();
 		// regressionMatrix();
 		// trainMultipleStocks();
-		// retrainValidModels();
-		trainSpecificStocks(args[0]);
+		if(args.length > 0)
+			trainSpecificStocks(args[0]);
+		else
+			retrainValidModels();
+		
 	}
 	
 	public static void regressionMatrix() throws IOException {
@@ -124,7 +127,8 @@ public class SpecificStockML {
 		// Many Input make the OOM. So cut thie input files just two files.
 		// For 1 time, Make model and training.
 		if(needRenew) {
-			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), needRenew);
+			log.debug("New Model Created.");
+			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), false);
 			// For 1 times. Training with uncorrelated ones.
 			// relatedStocks[0] = mostUncorrelateds.get((int)Math.floor(mostUncorrelateds.size() * Math.random()));
 			// lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
@@ -138,6 +142,7 @@ public class SpecificStockML {
 			// For 1 times, Training with original ones.
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, new String[]{stockId}), true);
 		} else {
+			log.debug("Old Model reused.");
 			// For 4 times, Training with correlated ones.
 			relatedStocks[0] = mostCorrelateds.get((int)Math.floor(mostCorrelateds.size() * Math.random()));
 			lastMetric = creator.trainOneModel(modelPath, FileUtil.getBaseDataCsvFilePaths(FileUtil.ML_BASE_DATE, relatedStocks), true);
@@ -161,12 +166,14 @@ public class SpecificStockML {
 					.stream()
 					.map(predict -> predict.getPredictStockId())
 					.collect(Collectors.toList());
-			log.debug("Learning target is " + String.join(",", mostCorrelateds));
-			log.debug("Learning target is " + String.join(",", mostUncorrelateds));
+			log.debug("Correlated learning targets are " + String.join(",", mostCorrelateds));
+			log.debug("Uncorrelated learning targets are " + String.join(",", mostUncorrelateds));
 			float accuracy = DailyStockDao.getLastPredictMetric(stockId).getAccuracy();
-			log.debug("Accuracy is " + accuracy);
-			if(accuracy > SKIP_THRESHOLD && !needSkip)
+			log.debug("Accuracy on Database is " + accuracy);
+			if(accuracy > SKIP_THRESHOLD && !needSkip) {
+				log.debug("This item need not more learning cause of high accuracy.");
 				return lastMetric;
+			}
 			boolean needModelRenew = accuracy < RENEWAL_THRESHOLD;
 			lastMetric = trainWithOtherStocks(creator, stockId, modelPath, mostCorrelateds, mostUncorrelateds, needModelRenew, 3);
 		} catch (SQLException sqle) {

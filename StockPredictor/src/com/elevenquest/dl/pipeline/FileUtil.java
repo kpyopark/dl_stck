@@ -53,12 +53,12 @@ public class FileUtil {
     public final static String ML_BASE_DATE = "20120101";
     
     public final static boolean LOCAL_FILE_SYSTEM = !"true".equals(System.getProperty("S3_ENABLED"));
-    /*
+
     final static String[] TRAIN_CSV_PATHS = { 
     		"E:/Document/A005930_20130101_org.csv", 
     		"E:/Document/A008560_20130101_org.csv",
     		"E:/Document/A114800_20160501_org.csv" };
-    */
+    
     // final static String[] PREDICT_CSV_PATHS = { "E:/Document/04.AI/A042670_20160101.csv" };
     // { "E:/Document/A005930_20160101_org.csv", "E:/Document/A008560_20160101_org.csv" };
 

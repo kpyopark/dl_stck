@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.datavec.api.records.reader.RecordReader;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
@@ -15,6 +17,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
+import org.deeplearning4j.nn.conf.layers.AutoEncoder;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
@@ -27,6 +30,7 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.SplitTestAndTrain;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerMinMaxScaler;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -44,8 +48,46 @@ public class StockMultiLayerPredictor {
 
     private static Logger log = LoggerFactory.getLogger(StockMultiLayerPredictor.class);
     
-    public static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
+    final static int[] LAYER_NODES = { 500, 100, 10, 100 };
+    final int epochTime = 20;
+    final int iterations = 100;
+    final int maxDataSize = 1201;
+    final int miniBatchSize = 400;
+    final float learningRate = 0.001f;
     
+    public static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
+
+    public void buildModel() {
+        log.info("Build model....");
+        int layer = 0;
+        MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
+            .seed(seed)
+            .iterations(iterations)
+            .activation(Activation.TANH)
+            .weightInit(WeightInit.XAVIER)
+            .updater(Updater.ADAGRAD)
+            .learningRate(learningRate)
+            .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+            .regularization(true).l2(1e-4)
+            .list()
+            .layer(layer, new DenseLayer.Builder().nIn(numInputs).nOut(LAYER_NODES[layer]).activation(Activation.RELU).dropOut(0.15f)
+                .build())
+            .layer(++layer, new DenseLayer.Builder().nIn(LAYER_NODES[layer-1]).nOut(LAYER_NODES[layer]).activation(Activation.RELU).dropOut(0.15f)
+                .build())
+            .layer(++layer, new DenseLayer.Builder().nIn(LAYER_NODES[layer-1]).nOut(LAYER_NODES[layer]).activation(Activation.RELU) //.dropOut(0.15f)
+                    .build())
+            .layer(++layer, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                .activation(Activation.SOFTMAX)
+                .nIn(LAYER_NODES[layer-1]).nOut(outputNum).build())
+            .backprop(true)
+            .pretrain(true)
+            .build();
+
+        //run the model
+        model = new MultiLayerNetwork(conf);
+        model.init();
+    }
+
     public static void main(String[] args) throws  Exception {
     	predictDailyMetric();
     }
@@ -161,12 +203,12 @@ public class StockMultiLayerPredictor {
     static final float[] thresholds = { 0.042f , -0.02f };
     static final int outputNum = thresholds.length + 1;
     static final List<String> outputLabel = Arrays.asList(new String[]{"Sell","N/A","Buy"}); 
-    final int iterations = 4000;
-    final int batchSize = 1201;
     long seed = 6;
     
     DataSet orgData = null;
     DataSet allData = null;
+    DataSet labeledData = null;
+    DataSet targetMiniBatchData = null;
     DataSet trainingData = null;
     DataSet testData = null;
     
@@ -186,7 +228,7 @@ public class StockMultiLayerPredictor {
                 File tempFile = fileDelegator.getTempFile();
                 log.debug("Train File[" + trainFile + "] TEMPFILE[" + tempFile.getAbsolutePath() + "] : Size[" + tempFile.length() + "]");
                 recordReader.initialize(new FileSplit(tempFile));
-                DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader,batchSize);
+                DataSetIterator iterator = new RecordReaderDataSetIterator(recordReader,maxDataSize);
                 mergedTarget.add(iterator.next());
             } finally {
             	if(fileDelegator != null) try {fileDelegator.close();} catch (Exception e) {}
@@ -226,57 +268,36 @@ public class StockMultiLayerPredictor {
         	tempMergeList.add(labelDataSets.get(inx).sample(minNumExample));
         }
         
-        DataSet targetData = DataSet.merge(tempMergeList);
+        labeledData = DataSet.merge(tempMergeList);
+        labeledData.shuffle();
+        // normalize();
+    }
+    
+    private void nextDataSet() {
+    	labeledData.shuffle();
+    	targetMiniBatchData = labeledData.sample(miniBatchSize);
+    }
+    
+    private void normalize() {
         
-        // System.out.println("Min Number of Example:" + minNumExample);
-        targetData.shuffle();
-        
-        SplitTestAndTrain testAndTrain = targetData.splitTestAndTrain(0.65);  //Use 65% of data for training
+        SplitTestAndTrain testAndTrain = targetMiniBatchData.splitTestAndTrain(0.65);  //Use 65% of data for training
         trainingData = testAndTrain.getTrain();
         testData = testAndTrain.getTest();
 
-        //We need to normalize our data. We'll use NormalizeStandardize (which gives us mean 0, unit variance):
-        DataNormalization normalizer = new NormalizerStandardize();
-        normalizer.fit(trainingData);           //Collect the statistics (mean/stdev) from the training data. This does not modify the input data
-        normalizer.transform(trainingData);     //Apply normalization to the training data
-        normalizer.transform(testData);         //Apply normalization to the test data. This is using statistics calculated from the *training* set
-    }
-    
-    public void buildModel() {
-        log.info("Build model....");
-        MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-            .seed(seed)
-            .iterations(iterations)
-            .activation(Activation.RELU)
-            .weightInit(WeightInit.XAVIER)
-            .updater(Updater.ADAGRAD)
-            .learningRate(0.1)
-            .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-            .regularization(true).l2(1e-4)
-            .list()
-            .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(500)
-                .build())
-            .layer(1, new DenseLayer.Builder().nIn(500).nOut(100).dropOut(0.5f)
-                .build())
-            .layer(2, new DenseLayer.Builder().nIn(100).nOut(10)
-                    .build())
-            .layer(3, new DenseLayer.Builder().nIn(10).nOut(100).dropOut(0.5f)
-                    .build())
-            .layer(4, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
-                .activation(Activation.SOFTMAX)
-                .nIn(100).nOut(outputNum).build())
-            .backprop(true)
-            .pretrain(true)
-            .build();
-
-        //run the model
-        model = new MultiLayerNetwork(conf);
-        model.init();
+        //DataNormalization normalizer = new NormalizerMinMaxScaler(-1, 1);
+        //normalizer.
+        //normalizer.fit(trainingData);           //Collect the statistics (mean/stdev) from the training data. This does not modify the input data
+        //normalizer.transform(trainingData);     //Apply normalization to the training data
+        //normalizer.transform(testData);         //Apply normalization to the test data. This is using statistics calculated from the *training* set
     }
     
     private void trainModel() {
-        model.setListeners(new ScoreIterationListener(100));
-        model.fit(trainingData);
+    	for(int cnt = 0 ; cnt < epochTime; cnt++) {
+    		nextDataSet();
+    		normalize();
+            model.setListeners(new ScoreIterationListener(100));
+            model.fit(trainingData);
+    	}
     }
     
     public Evaluation evaluate() {
@@ -313,13 +334,17 @@ public class StockMultiLayerPredictor {
     
     public void loadModel() throws Exception {
     	this.model = ModelSerializer.restoreMultiLayerNetwork(file.getTempFile());
+    	this.model.printConfiguration();
+    	for(Entry<String, Double> entry : this.model.conf().getLearningRateByParam().entrySet()) {
+    		log.debug(entry.getKey() + ":" + entry.getValue());
+    	}
     }
     
     private Evaluation predict() {
     	DataSet copySet = allData.copy();
-        DataNormalization normalizer = new NormalizerStandardize();
-        normalizer.fit(copySet);
-        normalizer.transform(copySet);
+        //DataNormalization normalizer = new NormalizerMinMaxScaler(-0.155, 0.114);
+        //normalizer.fit(copySet);
+        //normalizer.transform(copySet);
         Evaluation eval = new Evaluation(outputNum);
         INDArray output = model.output(copySet.getFeatureMatrix());
         eval.eval(copySet.getLabels(), output);
